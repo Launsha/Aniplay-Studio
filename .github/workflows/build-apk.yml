@@ -11,6 +11,7 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: zulu, java-version: '21' }
       - uses: android-actions/setup-android@v3
+        with: { packages: platform-tools }
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: 9.3.1 }
       - run: keytool -genkeypair -keystore debug.keystore -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
