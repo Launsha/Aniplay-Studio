@@ -1,0 +1,6 @@
+{
+  "name": "AnimePlay",
+  "description": "Pemutar video anime offline yang memindai folder Download otomatis, mengelompokkan episode, dan dilengkapi pemutar Media3 kustom.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

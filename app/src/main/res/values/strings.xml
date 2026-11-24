@@ -1,0 +1,86 @@
+<resources>
+    <string name="app_name">AnimePlay</string>
+
+    <!-- Navigasi & Aksi Umum -->
+    <string name="action_refresh">Segarkan</string>
+    <string name="action_back">Kembali</string>
+    <string name="action_search">Cari</string>
+    <string name="action_clear_search">Hapus pencarian</string>
+    <string name="action_retry">Coba Lagi</string>
+    <string name="action_save">Simpan</string>
+    <string name="action_cancel">Batal</string>
+    <string name="action_close">Tutup</string>
+
+    <!-- Layar Izin -->
+    <string name="permission_title">Akses Video Diperlukan</string>
+    <string name="permission_description">AnimePlay butuh izin buat mengakses video di perangkatmu biar bisa memindai koleksi anime di folder Download secara otomatis.</string>
+    <string name="permission_offline_note">Semua pemindaian dan pemutaran berlangsung 100% offline di HP kamu.</string>
+    <string name="permission_grant_button">Izinkan Akses Video</string>
+    <string name="permission_settings_button">Buka Pengaturan</string>
+    <string name="permission_denied_hint">Izin akses video ditolak. Aktifkan izin di pengaturan aplikasi supaya AnimePlay bisa membaca folder Download.</string>
+
+    <!-- Beranda & Pencarian -->
+    <string name="home_continue_watching">Lanjutkan Menonton</string>
+    <string name="home_library_title">Koleksi Anime</string>
+    <string name="home_scanning">Memindai folder Download…</string>
+    <string name="home_search_hint">Cari judul, genre, atau tahun…</string>
+    <string name="home_filter_all_genres">Semua Genre</string>
+    <string name="home_filter_all_years">Semua Tahun</string>
+    <string name="home_episode_count">%1$d Episode</string>
+    <string name="home_episode_badge">Ep %1$d</string>
+    <string name="home_watched_progress">%1$d/%2$d ditonton</string>
+    <string name="home_empty_title">Folder Download kosong</string>
+    <string name="home_empty_subtitle">Belum ada file video anime (.mp4, .mkv, .avi, .webm) yang ditemukan di folder Download.</string>
+    <string name="home_search_empty_title">Anime tidak ditemukan</string>
+    <string name="home_search_empty_subtitle">Coba ubah kata kunci pencarian atau filter genre dan tahunnya.</string>
+    <string name="home_scan_complete">%1$d anime ditemukan</string>
+    <string name="home_scan_error">Gagal memindai folder Download: %1$s</string>
+
+    <!-- Layar Detail Anime -->
+    <string name="detail_play_now">Putar Sekarang</string>
+    <string name="detail_continue_episode">Lanjutkan Ep %1$d</string>
+    <string name="detail_episode_list_title">Daftar Episode</string>
+    <string name="detail_episode_label">Episode %1$d</string>
+    <string name="detail_watched_label">Sudah ditonton</string>
+    <string name="detail_mark_watched">Tandai sudah ditonton</string>
+    <string name="detail_unmark_watched">Tandai belum ditonton</string>
+    <string name="detail_edit_info">Ubah Info</string>
+    <string name="detail_edit_info_title">Info Anime</string>
+    <string name="detail_genre_label">Genre</string>
+    <string name="detail_year_label">Tahun Rilis</string>
+    <string name="detail_year_placeholder">Contoh: 2024</string>
+    <string name="detail_genre_placeholder">Contoh: Action, Fantasy</string>
+    <string name="detail_no_episodes">Belum ada episode tersedia.</string>
+    <string name="detail_resume_at">Lanjut di %1$s</string>
+
+    <!-- Pemutar Video (Player) -->
+    <string name="player_episode_title">%1$s • Ep %2$d</string>
+    <string name="player_play">Putar</string>
+    <string name="player_pause">Jeda</string>
+    <string name="player_rewind_10">Mundur 10 detik</string>
+    <string name="player_forward_10">Maju 10 detik</string>
+    <string name="player_seek_backward_badge">-10 dtk</string>
+    <string name="player_seek_forward_badge">+10 dtk</string>
+    <string name="player_next_episode">Episode Berikutnya</string>
+    <string name="player_speed_label">Kecepatan</string>
+    <string name="player_speed_value">%1$sx</string>
+    <string name="player_subtitle_on">Subtitle Aktif</string>
+    <string name="player_subtitle_off">Subtitle Nonaktif</string>
+    <string name="player_select_subtitle">Pilih Subtitle</string>
+    <string name="player_subtitle_loaded">Subtitle dipasang: %1$s</string>
+    <string name="player_subtitle_not_found">Subtitle belum dipilih</string>
+    <string name="player_brightness_label">Kecerahan %1$d%%</string>
+    <string name="player_volume_label">Volume %1$d%%</string>
+    <string name="player_loading">Memuat video…</string>
+    <string name="player_error_title">Video gagal diputar</string>
+    <string name="player_error_description">File video mungkin rusak, format tidak didukung, atau sudah dipindahkan dari folder Download.</string>
+    <string name="player_back_to_detail">Kembali ke Daftar Episode</string>
+
+    <!-- Deskripsi Konten Aksesibilitas -->
+    <string name="cd_app_logo">Logo AnimePlay</string>
+    <string name="cd_anime_thumbnail">Thumbnail %1$s</string>
+    <string name="cd_empty_illustration">Ilustrasi bioskop kosong</string>
+    <string name="cd_episode_play">Putar episode %1$d</string>
+    <string name="cd_brightness_icon">Ikon kecerahan</string>
+    <string name="cd_volume_icon">Ikon volume</string>
+</resources>
