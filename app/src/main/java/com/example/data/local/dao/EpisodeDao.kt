@@ -23,6 +23,17 @@ interface EpisodeDao {
   )
   fun observeContinueWatching(): Flow<List<EpisodeWithAnime>>
 
+  @Transaction
+  @Query(
+    """
+    SELECT * FROM episodes
+    WHERE lastPlayedAt > 0
+    ORDER BY lastPlayedAt DESC
+    LIMIT 12
+    """
+  )
+  fun observeRecentHistory(): Flow<List<EpisodeWithAnime>>
+
   @Query("SELECT * FROM episodes WHERE animeId = :animeId ORDER BY number ASC, fileName ASC")
   fun observeEpisodesForAnime(animeId: Long): Flow<List<EpisodeEntity>>
 

@@ -5,7 +5,9 @@ import android.content.Context
 import androidx.room.Room
 import com.example.data.local.AnimeDatabase
 import com.example.data.local.dao.AnimeDao
+import com.example.data.local.dao.BookmarkDao
 import com.example.data.local.dao.EpisodeDao
+import com.example.data.local.dao.WatchActivityDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -24,7 +26,9 @@ object DatabaseModule {
       context,
       AnimeDatabase::class.java,
       "animeplay.db"
-    ).build()
+    )
+      .addMigrations(AnimeDatabase.MIGRATION_1_2, AnimeDatabase.MIGRATION_2_3)
+      .build()
   }
 
   @Provides
@@ -32,6 +36,12 @@ object DatabaseModule {
 
   @Provides
   fun provideEpisodeDao(database: AnimeDatabase): EpisodeDao = database.episodeDao()
+
+  @Provides
+  fun provideWatchActivityDao(database: AnimeDatabase): WatchActivityDao = database.watchActivityDao()
+
+  @Provides
+  fun provideBookmarkDao(database: AnimeDatabase): BookmarkDao = database.bookmarkDao()
 
   @Provides
   fun provideContentResolver(@ApplicationContext context: Context): ContentResolver =

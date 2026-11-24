@@ -1,7 +1,11 @@
 <resources>
     <string name="app_name">AnimePlay</string>
 
-    <!-- Navigasi & Aksi Umum -->
+    <!-- Navigasi Utama & Aksi Umum -->
+    <string name="nav_home">Beranda</string>
+    <string name="nav_library">Pustaka</string>
+    <string name="nav_stats">Statistik</string>
+    <string name="nav_settings">Pengaturan</string>
     <string name="action_refresh">Segarkan</string>
     <string name="action_back">Kembali</string>
     <string name="action_search">Cari</string>
@@ -10,33 +14,123 @@
     <string name="action_save">Simpan</string>
     <string name="action_cancel">Batal</string>
     <string name="action_close">Tutup</string>
+    <string name="action_settings">Pengaturan</string>
+    <string name="action_add">Tambah</string>
+    <string name="action_delete">Hapus</string>
+    <string name="action_next">Lanjut</string>
+    <string name="action_skip">Lewati</string>
+    <string name="action_start_now">Mulai Menonton</string>
+    <string name="action_open_guide">Panduan</string>
+
+    <!-- Ucapan Selamat Datang & Panduan (Onboarding / Guide) -->
+    <string name="greeting_morning">Selamat Pagi! ☀️</string>
+    <string name="greeting_afternoon">Selamat Siang! 🌤️</string>
+    <string name="greeting_evening">Selamat Sore! 🌅</string>
+    <string name="greeting_night">Selamat Malam! 🌙</string>
+    <string name="greeting_welcome_subtitle">Selamat datang kembali di AnimePlay. Bioskop anime offline pribadimu siap diputar kapan saja.</string>
+
+    <string name="onboarding_page1_title">Selamat Datang di AnimePlay!</string>
+    <string name="onboarding_page1_body">Nikmati tontonan anime lokal bergaya bioskop gelap dengan aksen oranye VLC, lengkap dengan pemindaian folder pilihan, pelacakan MyAnimeList, dan kontrol gestur profesional.</string>
+    <string name="onboarding_page2_title">Halaman Rapi &amp; Pustaka Pintar</string>
+    <string name="onboarding_page2_body">Aplikasimu dibagi menjadi 4 halaman utama: Beranda untuk lanjut menonton, Pustaka untuk cari &amp; sortir koleksi, Statistik untuk grafik mingguan, dan Pengaturan lanjutan ala VLC.</string>
+    <string name="onboarding_page3_title">Kontrol Pemutar Ala VLC Mobile</string>
+    <string name="onboarding_page3_body">Geser kiri untuk kecerahan, geser kanan untuk volume, ketuk dua kali untuk lompat cepat, atur Equalizer audio, pilih multi-track audio MKV, ganti rasio layar, hingga Skip OP +85 dtk!</string>
+    <string name="onboarding_page4_title">Siap Memulai Petualangan?</string>
+    <string name="onboarding_page4_body">Pilih folder tempat kamu menyimpan file video anime (.mkv, .mp4, .avi, .webm), atau langsung jelajahi aplikasi dan atur kapan saja di menu Pengaturan.</string>
+    <string name="onboarding_pick_folder_cta">Pilih Folder Anime Sekarang</string>
+
+    <string name="guide_screen_title">Panduan &amp; Tips AnimePlay</string>
+    <string name="guide_naming_title">Format Penamaan File Otomatis</string>
+    <string name="guide_naming_body">AnimePlay otomatis mengenali judul dan nomor episode dari pola seperti “[SubsGroup] Sousou no Frieren - 05 [1080p].mkv”. Jika gagal, nama folder induk akan dipakai sebagai judul seri.</string>
+    <string name="guide_gestures_title">Gestur &amp; Pintasan Pemutar VLC</string>
+    <string name="guide_gesture_left">Geser Vertikal Kiri: Atur Kecerahan Layar</string>
+    <string name="guide_gesture_right">Geser Vertikal Kanan: Atur Volume Media</string>
+    <string name="guide_gesture_double">Ketuk Dua Kali Kiri/Kanan: Mundur/Maju Cepat</string>
+    <string name="guide_gesture_lock">Ikon Gembok: Kunci Sentuhan agar tidak tersentuh tak sengaja</string>
+    <string name="guide_mal_title">Integrasi &amp; Ekspor MyAnimeList</string>
+    <string name="guide_mal_body">Hubungkan anime di halaman Detail untuk mengisi sinopsis, cover, genre, skor MAL otomatis, serta ekspor daftar tontonan ke format XML standar MyAnimeList dari Pengaturan.</string>
+    <string name="guide_replay_welcome">Putar Ulang Sambutan Awal</string>
+
+    <!-- Ucapan Selamat Pencapaian (Milestone Celebration) -->
+    <string name="celebration_title">Selamat! Pencapaian Baru! 🎉</string>
+    <string name="celebration_dismiss">Keren, Lanjutkan!</string>
+    <string name="milestone_first_watch_title">Langkah Pertama Otaku</string>
+    <string name="milestone_first_watch_desc">Selamat! Kamu telah menyelesaikan episode pertamamu di AnimePlay.</string>
+    <string name="milestone_one_hour_title">Maraton 1 Jam</string>
+    <string name="milestone_one_hour_desc">Luar biasa! Total waktu menontonmu sudah mencapai lebih dari 1 jam.</string>
+    <string name="milestone_five_hours_title">Penikmat Anime Sejati</string>
+    <string name="milestone_five_hours_desc">Hebat! Kamu sudah menghabiskan lebih dari 5 jam menonton anime favoritmu.</string>
+    <string name="milestone_series_complete_title">Tamat Satu Seri!</string>
+    <string name="milestone_series_complete_desc">Selamat! Kamu berhasil menamatkan seluruh episode dalam satu seri anime.</string>
+    <string name="milestone_unlocked_badge">Tercapai ✓</string>
+    <string name="milestone_locked_badge">Belum Tercapai</string>
 
     <!-- Layar Izin -->
     <string name="permission_title">Akses Video Diperlukan</string>
-    <string name="permission_description">AnimePlay butuh izin buat mengakses video di perangkatmu biar bisa memindai koleksi anime di folder Download secara otomatis.</string>
-    <string name="permission_offline_note">Semua pemindaian dan pemutaran berlangsung 100% offline di HP kamu.</string>
+    <string name="permission_description">AnimePlay butuh izin buat mengakses video di perangkatmu biar bisa memindai koleksi anime di folder yang kamu pilih.</string>
+    <string name="permission_offline_note">Semua video dan progres menonton tersimpan aman secara lokal di perangkatmu.</string>
     <string name="permission_grant_button">Izinkan Akses Video</string>
     <string name="permission_settings_button">Buka Pengaturan</string>
-    <string name="permission_denied_hint">Izin akses video ditolak. Aktifkan izin di pengaturan aplikasi supaya AnimePlay bisa membaca folder Download.</string>
+    <string name="permission_denied_hint">Izin akses video ditolak. Aktifkan izin di pengaturan aplikasi supaya AnimePlay bisa membaca folder video.</string>
 
-    <!-- Beranda & Pencarian -->
+    <!-- Beranda, Ringkasan & Quick-Start -->
+    <string name="home_summary_title">Ringkasan Menonton</string>
+    <string name="home_total_hours_label">Total Jam Ditonton</string>
+    <string name="home_hours_value">%1$.1f Jam</string>
+    <string name="home_minutes_value">%1$d Mnt</string>
+    <string name="home_episodes_watched_label">Episode Selesai</string>
+    <string name="home_anime_count_label">Koleksi Anime</string>
+    <string name="home_favorites_title">Anime Favoritmu</string>
+    <string name="home_recent_title">Baru Ditambahkan &amp; Diputar</string>
+    <string name="home_view_all_library">Lihat Semua di Pustaka</string>
+    <string name="home_quick_guide_title">Mulai Cepat AnimePlay</string>
+    <string name="home_quick_guide_step1">1. Tambahkan folder berisi file anime di Pengaturan</string>
+    <string name="home_quick_guide_step2">2. Ketuk Segarkan untuk memindai &amp; mengisi data otomatis</string>
+    <string name="home_quick_guide_step3">3. Nikmati pemutar VLC lengkap dengan subtitle &amp; equalizer</string>
+    <string name="home_configured_folders_chip">Folder aktif: %1$s</string>
+
+    <!-- Statistik Page -->
+    <string name="stats_page_title">Statistik &amp; Pencapaian</string>
+    <string name="home_anime_statistics_title">Anime Statistics</string>
+    <string name="home_anime_statistics_subtitle">Pola waktu menonton berdasarkan hari dalam seminggu (menit)</string>
+    <string name="home_statistics_no_data">Belum ada aktivitas menonton minggu ini. Putar episode untuk melihat grafik.</string>
+    <string name="stats_achievements_title">Pencapaian &amp; Ucapan Selamat</string>
+    <string name="stats_mal_breakdown_title">Distribusi Status MyAnimeList</string>
+    <string name="stats_recent_history_title">Riwayat Tontonan Terakhir</string>
+    <string name="stats_recent_history_empty">Belum ada riwayat episode yang diputar.</string>
+    <string name="stats_completed_series_label">Seri Tamat</string>
+    <string name="day_mon">Sen</string>
+    <string name="day_tue">Sel</string>
+    <string name="day_wed">Rab</string>
+    <string name="day_thu">Kam</string>
+    <string name="day_fri">Jum</string>
+    <string name="day_sat">Sab</string>
+    <string name="day_sun">Min</string>
+
+    <!-- Pustaka / Library Page -->
+    <string name="library_page_title">Pustaka Anime</string>
+    <string name="library_sort_recent">Terbaru</string>
+    <string name="library_sort_title">Judul A–Z</string>
+    <string name="library_sort_score">Skor MAL</string>
+    <string name="library_sort_year">Tahun Rilis</string>
+    <string name="library_filter_favorites_only">Favorit Saja</string>
+    <string name="library_toggle_view">Ubah tampilan daftar/grid</string>
     <string name="home_continue_watching">Lanjutkan Menonton</string>
     <string name="home_library_title">Koleksi Anime</string>
-    <string name="home_scanning">Memindai folder Download…</string>
+    <string name="home_scanning">Memindai folder terpilih…</string>
     <string name="home_search_hint">Cari judul, genre, atau tahun…</string>
     <string name="home_filter_all_genres">Semua Genre</string>
-    <string name="home_filter_all_years">Semua Tahun</string>
     <string name="home_episode_count">%1$d Episode</string>
     <string name="home_episode_badge">Ep %1$d</string>
     <string name="home_watched_progress">%1$d/%2$d ditonton</string>
-    <string name="home_empty_title">Folder Download kosong</string>
-    <string name="home_empty_subtitle">Belum ada file video anime (.mp4, .mkv, .avi, .webm) yang ditemukan di folder Download.</string>
+    <string name="home_empty_title">Folder pilihan kosong</string>
+    <string name="home_empty_subtitle">Belum ada file video anime (.mp4, .mkv, .avi, .webm) di folder yang ditentukan (%1$s). Atur folder di Pengaturan atau pindai ulang.</string>
     <string name="home_search_empty_title">Anime tidak ditemukan</string>
     <string name="home_search_empty_subtitle">Coba ubah kata kunci pencarian atau filter genre dan tahunnya.</string>
-    <string name="home_scan_complete">%1$d anime ditemukan</string>
-    <string name="home_scan_error">Gagal memindai folder Download: %1$s</string>
+    <string name="home_scan_error">Gagal memindai folder: %1$s</string>
+    <string name="home_open_settings">Atur Folder</string>
 
-    <!-- Layar Detail Anime -->
+    <!-- Layar Detail & Edit Anime -->
     <string name="detail_play_now">Putar Sekarang</string>
     <string name="detail_continue_episode">Lanjutkan Ep %1$d</string>
     <string name="detail_episode_list_title">Daftar Episode</string>
@@ -44,23 +138,166 @@
     <string name="detail_watched_label">Sudah ditonton</string>
     <string name="detail_mark_watched">Tandai sudah ditonton</string>
     <string name="detail_unmark_watched">Tandai belum ditonton</string>
-    <string name="detail_edit_info">Ubah Info</string>
-    <string name="detail_edit_info_title">Info Anime</string>
+    <string name="detail_favorite_add">Tambah ke Favorit</string>
+    <string name="detail_favorite_remove">Hapus dari Favorit</string>
+    <string name="detail_bookmarks_title">Momen Tersimpan (Bookmark)</string>
+    <string name="detail_edit_info">Edit Info</string>
+    <string name="detail_edit_info_title">Edit Data Anime</string>
+    <string name="detail_title_label">Judul Anime</string>
+    <string name="detail_synopsis_label">Sinopsis</string>
+    <string name="detail_synopsis_placeholder">Tulis ringkasan cerita anime…</string>
+    <string name="detail_synopsis_empty">Belum ada sinopsis. Ketuk Edit Info atau hubungkan ke MyAnimeList untuk mengisi otomatis.</string>
+    <string name="detail_read_more">Selengkapnya</string>
+    <string name="detail_read_less">Ringkas</string>
     <string name="detail_genre_label">Genre</string>
-    <string name="detail_year_label">Tahun Rilis</string>
-    <string name="detail_year_placeholder">Contoh: 2024</string>
+    <string name="detail_release_date_label">Tanggal Rilis</string>
+    <string name="detail_release_date_placeholder">Contoh: 29 Sep 2023 atau 2024</string>
     <string name="detail_genre_placeholder">Contoh: Action, Fantasy</string>
+    <string name="detail_pick_cover">Pilih Cover</string>
+    <string name="detail_reset_cover">Reset Cover</string>
     <string name="detail_no_episodes">Belum ada episode tersedia.</string>
     <string name="detail_resume_at">Lanjut di %1$s</string>
 
-    <!-- Pemutar Video (Player) -->
+    <!-- MyAnimeList Tracking -->
+    <string name="mal_section_title">Pelacakan MyAnimeList</string>
+    <string name="mal_search_button">Cari di MyAnimeList</string>
+    <string name="mal_unlink_button">Putuskan</string>
+    <string name="mal_open_web">Buka di MAL</string>
+    <string name="mal_score_badge">MAL ★ %1$.1f</string>
+    <string name="mal_user_score_label">Skor Kamu</string>
+    <string name="mal_status_label">Status Tonton</string>
+    <string name="mal_progress_label">Progres: %1$d / %2$d Episode</string>
+    <string name="mal_status_watching">Sedang Ditonton</string>
+    <string name="mal_status_completed">Selesai</string>
+    <string name="mal_status_on_hold">Ditunda</string>
+    <string name="mal_status_dropped">Berhenti</string>
+    <string name="mal_status_plan">Rencana Tonton</string>
+    <string name="mal_search_dialog_title">Cari di MyAnimeList</string>
+    <string name="mal_search_hint">Ketik judul anime…</string>
+    <string name="mal_searching">Mencari di MyAnimeList…</string>
+    <string name="mal_search_empty">Hasil tidak ditemukan di MyAnimeList.</string>
+    <string name="mal_search_error">Gagal terhubung ke MyAnimeList. Pastikan koneksi internet aktif.</string>
+    <string name="mal_linked_toast">Terhubung ke MyAnimeList &amp; data diperbarui</string>
+
+    <!-- Layar Pengaturan Lanjutan (Gaya VLC Mobile) -->
+    <string name="settings_title">Pengaturan Lanjutan</string>
+    <string name="settings_tab_general">Umum</string>
+    <string name="settings_tab_video">Video</string>
+    <string name="settings_tab_audio">Audio</string>
+    <string name="settings_tab_subtitle">Subtitle</string>
+    <string name="settings_tab_controls">Kontrol</string>
+    <string name="settings_tab_advanced">Lanjutan</string>
+
+    <string name="settings_folders_section">Folder Pemindaian</string>
+    <string name="settings_folders_desc">Hanya folder yang terdaftar di bawah ini yang akan dipindai untuk mencari file video anime.</string>
+    <string name="settings_add_folder">Tambah Folder</string>
+    <string name="settings_scan_now">Pindai Sekarang</string>
+    <string name="settings_folder_empty">Belum ada folder dipilih. Tambahkan minimal satu folder.</string>
+
+    <string name="settings_video_vlc_section">Video &amp; Akselerasi (VLC)</string>
+    <string name="settings_hw_accel">Akselerasi Perangkat Keras</string>
+    <string name="settings_hw_auto">Otomatis</string>
+    <string name="settings_hw_hardware">Aktif (HW)</string>
+    <string name="settings_hw_software">Perangkat Lunak (SW)</string>
+    <string name="settings_aspect_ratio">Rasio Aspek Default</string>
+    <string name="settings_aspect_fit">Sesuai Layar</string>
+    <string name="settings_aspect_fill">Penuh</string>
+    <string name="settings_aspect_zoom">Zoom</string>
+    <string name="settings_aspect_16_9">16:9</string>
+    <string name="settings_aspect_4_3">4:3</string>
+    <string name="settings_orientation">Orientasi Layar Pemutar</string>
+    <string name="settings_orient_sensor">Lanskap Sensor</string>
+    <string name="settings_orient_locked">Kunci Lanskap</string>
+    <string name="settings_orient_system">Ikuti Sistem</string>
+    <string name="settings_pip_title">Mode Picture-in-Picture (PiP)</string>
+    <string name="settings_pip_desc">Perkecil pemutar ke jendela mengambang saat berpindah aplikasi.</string>
+    <string name="settings_keep_screen_on">Tetap Nyalakan Layar</string>
+    <string name="settings_keep_screen_on_desc">Cegah layar meredup atau mati saat pemutaran berlangsung.</string>
+
+    <string name="settings_audio_vlc_section">Audio &amp; Equalizer (VLC)</string>
+    <string name="settings_eq_preset">Preset Equalizer</string>
+    <string name="settings_eq_normal">Normal</string>
+    <string name="settings_eq_anime">Anime &amp; Vokal</string>
+    <string name="settings_eq_bass">Ekstra Bass</string>
+    <string name="settings_eq_cinema">Bioskop</string>
+    <string name="settings_eq_night">Mode Malam</string>
+    <string name="settings_audio_boost">Penguat Volume (Audio Boost): %1$d%%</string>
+    <string name="settings_skip_silence">Lewati Bagian Hening (Skip Silence)</string>
+    <string name="settings_skip_silence_desc">Percepat otomatis bagian audio yang benar-benar senyap.</string>
+    <string name="settings_preferred_audio">Bahasa Audio Prioritas</string>
+    <string name="settings_audio_lang_auto">Otomatis</string>
+    <string name="settings_audio_lang_jpn">Jepang</string>
+    <string name="settings_audio_lang_eng">Inggris</string>
+    <string name="settings_audio_lang_ind">Indonesia</string>
+
+    <string name="settings_subtitle_vlc_section">Tampilan Subtitle (VLC)</string>
+    <string name="settings_auto_subtitle">Aktifkan Subtitle Otomatis</string>
+    <string name="settings_auto_subtitle_desc">Otomatis nyalakan subtitle jika file .srt atau .ass ditemukan.</string>
+    <string name="settings_subtitle_size">Ukuran Teks Subtitle</string>
+    <string name="settings_subtitle_size_small">Kecil</string>
+    <string name="settings_subtitle_size_normal">Normal</string>
+    <string name="settings_subtitle_size_large">Besar</string>
+    <string name="settings_subtitle_size_xlarge">Ekstra</string>
+    <string name="settings_subtitle_color">Warna Teks Subtitle</string>
+    <string name="settings_sub_color_white">Putih</string>
+    <string name="settings_sub_color_yellow">Kuning</string>
+    <string name="settings_sub_color_orange">Oranye</string>
+    <string name="settings_sub_color_cyan">Cyan</string>
+    <string name="settings_subtitle_bg">Kotak Latar Subtitle</string>
+    <string name="settings_subtitle_bg_desc">Tambahkan bayangan kotak gelap agar teks lebih mudah dibaca.</string>
+
+    <string name="settings_playback_section">Kontrol &amp; Gestur Pemutar</string>
+    <string name="settings_default_speed">Kecepatan Putar Default</string>
+    <string name="settings_seek_jump">Durasi Lompat Cepat</string>
+    <string name="settings_seek_jump_value">%1$d dtk</string>
+    <string name="settings_autohide_delay">Sembunyikan Kontrol Otomatis</string>
+    <string name="settings_autohide_value">%1$d dtk</string>
+    <string name="settings_autohide_manual">Manual</string>
+    <string name="settings_gestures_toggle">Gestur Kecerahan &amp; Volume</string>
+    <string name="settings_gestures_desc">Geser kiri/kanan layar secara vertikal saat menonton.</string>
+    <string name="settings_double_tap_toggle">Ketuk Dua Kali untuk Lompat</string>
+    <string name="settings_double_tap_desc">Ketuk 2x sisi kiri atau kanan pemutar untuk mundur/maju cepat.</string>
+    <string name="settings_clock_battery">Tampilkan Jam &amp; Baterai di Pemutar</string>
+    <string name="settings_clock_battery_desc">Tampilkan indikator waktu dan sisa baterai di bilah atas video.</string>
+    <string name="settings_skip_op_duration">Durasi Tombol Skip OP</string>
+    <string name="settings_autoplay_next">Putar Otomatis Episode Berikutnya</string>
+    <string name="settings_autoplay_next_desc">Lanjut memutar episode berikutnya saat episode saat ini selesai.</string>
+    <string name="settings_watched_threshold">Batas Tandai Sudah Ditonton</string>
+    <string name="settings_watched_threshold_value">%1$d%% durasi</string>
+
+    <string name="settings_advanced_vlc_section">Performa &amp; Lanjutan (VLC)</string>
+    <string name="settings_buffer_profile">Profil Buffer Memori</string>
+    <string name="settings_buffer_low_ram">Hemat RAM (2GB)</string>
+    <string name="settings_buffer_balanced">Standar</string>
+    <string name="settings_buffer_high">Maksimal</string>
+    <string name="settings_save_history">Simpan Riwayat &amp; Statistik</string>
+    <string name="settings_save_history_desc">Catat progres tontonan dan pola aktivitas mingguan secara lokal.</string>
+    <string name="settings_reset_vlc_defaults">Reset Pengaturan Pemutar ke Default</string>
+    <string name="settings_reset_vlc_done">Pengaturan pemutar dikembalikan ke default.</string>
+
+    <string name="settings_mal_section">Integrasi MyAnimeList</string>
+    <string name="settings_auto_enrich_mal">Isi Data Otomatis dari MyAnimeList</string>
+    <string name="settings_auto_enrich_mal_desc">Otomatis mengisi cover, sinopsis, genre, dan tanggal rilis dari MyAnimeList saat memindai.</string>
+    <string name="settings_export_mal_xml">Ekspor Daftar MAL (.xml)</string>
+    <string name="settings_export_mal_xml_desc">Simpan progres tontonan ke format XML standar MyAnimeList.</string>
+    <string name="settings_export_success">Daftar MyAnimeList berhasil diekspor.</string>
+    <string name="settings_storage_section">Penyimpanan &amp; Statistik</string>
+    <string name="settings_clear_cache">Bersihkan Cache Thumbnail</string>
+    <string name="settings_cache_cleared">Cache thumbnail dibersihkan.</string>
+    <string name="settings_reset_stats">Reset Statistik Menonton</string>
+    <string name="settings_reset_stats_confirm_title">Reset Statistik?</string>
+    <string name="settings_reset_stats_confirm_body">Semua data jam menonton dan grafik mingguan akan dihapus permanen.</string>
+    <string name="settings_stats_reset_done">Statistik menonton telah direset.</string>
+    <string name="settings_open_guide_button">Buka Panduan &amp; Ucapan Selamat</string>
+
+    <!-- Pemutar Video (Player Ala VLC) -->
     <string name="player_episode_title">%1$s • Ep %2$d</string>
     <string name="player_play">Putar</string>
     <string name="player_pause">Jeda</string>
-    <string name="player_rewind_10">Mundur 10 detik</string>
-    <string name="player_forward_10">Maju 10 detik</string>
-    <string name="player_seek_backward_badge">-10 dtk</string>
-    <string name="player_seek_forward_badge">+10 dtk</string>
+    <string name="player_rewind_10">Mundur %1$d detik</string>
+    <string name="player_forward_10">Maju %1$d detik</string>
+    <string name="player_seek_backward_badge">-%1$d dtk</string>
+    <string name="player_seek_forward_badge">+%1$d dtk</string>
     <string name="player_next_episode">Episode Berikutnya</string>
     <string name="player_speed_label">Kecepatan</string>
     <string name="player_speed_value">%1$sx</string>
@@ -68,18 +305,40 @@
     <string name="player_subtitle_off">Subtitle Nonaktif</string>
     <string name="player_select_subtitle">Pilih Subtitle</string>
     <string name="player_subtitle_loaded">Subtitle dipasang: %1$s</string>
-    <string name="player_subtitle_not_found">Subtitle belum dipilih</string>
     <string name="player_brightness_label">Kecerahan %1$d%%</string>
     <string name="player_volume_label">Volume %1$d%%</string>
     <string name="player_loading">Memuat video…</string>
     <string name="player_error_title">Video gagal diputar</string>
-    <string name="player_error_description">File video mungkin rusak, format tidak didukung, atau sudah dipindahkan dari folder Download.</string>
+    <string name="player_error_description">File video mungkin rusak, format tidak didukung, atau sudah dipindahkan dari folder terpilih.</string>
     <string name="player_back_to_detail">Kembali ke Daftar Episode</string>
+    <string name="player_lock_screen">Kunci Layar</string>
+    <string name="player_unlock_screen">Buka Kunci Layar</string>
+    <string name="player_screen_locked_hint">Layar terkunci. Ketuk gembok untuk membuka.</string>
+    <string name="player_aspect_ratio">Rasio Layar</string>
+    <string name="player_tracks_title">Track Audio &amp; Subtitle</string>
+    <string name="player_audio_tracks">Track Audio</string>
+    <string name="player_subtitle_tracks">Track Subtitle</string>
+    <string name="player_track_default">Track %1$d (%2$s)</string>
+    <string name="player_no_audio_tracks">Hanya satu track audio bawaan</string>
+    <string name="player_skip_op">Skip OP +%1$d dtk</string>
+    <string name="player_more_tools">Alat VLC</string>
+    <string name="player_sleep_timer">Timer Tidur</string>
+    <string name="player_sleep_off">Mati</string>
+    <string name="player_sleep_minutes">%1$d menit</string>
+    <string name="player_sleep_end_ep">Akhir episode</string>
+    <string name="player_sleep_remaining">Tidur %1$s</string>
+    <string name="player_bookmark_moment">Tandai Momen Ini</string>
+    <string name="player_bookmark_saved">Momen ditandai di %1$s</string>
+    <string name="player_pip_mode">Picture-in-Picture</string>
+    <string name="player_equalizer_title">Equalizer &amp; Boost</string>
+    <string name="player_battery_label">%1$d%%</string>
 
     <!-- Deskripsi Konten Aksesibilitas -->
     <string name="cd_app_logo">Logo AnimePlay</string>
     <string name="cd_anime_thumbnail">Thumbnail %1$s</string>
     <string name="cd_empty_illustration">Ilustrasi bioskop kosong</string>
+    <string name="cd_welcome_illustration">Ilustrasi sambutan AnimePlay</string>
+    <string name="cd_celebration_illustration">Ilustrasi ucapan selamat pencapaian</string>
     <string name="cd_episode_play">Putar episode %1$d</string>
     <string name="cd_brightness_icon">Ikon kecerahan</string>
     <string name="cd_volume_icon">Ikon volume</string>

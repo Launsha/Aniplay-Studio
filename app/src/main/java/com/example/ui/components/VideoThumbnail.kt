@@ -35,10 +35,21 @@ fun VideoThumbnail(
         modifier = Modifier.fillMaxSize()
       )
     } else {
+      val isVideoSource = !uri.startsWith("http", ignoreCase = true) &&
+        !uri.contains("/covers/", ignoreCase = true) &&
+        !uri.endsWith(".jpg", ignoreCase = true) &&
+        !uri.endsWith(".jpeg", ignoreCase = true) &&
+        !uri.endsWith(".png", ignoreCase = true) &&
+        !uri.endsWith(".webp", ignoreCase = true)
+
       AsyncImage(
         model = ImageRequest.Builder(context)
           .data(uri)
-          .videoFramePercent(0.15)
+          .apply {
+            if (isVideoSource) {
+              videoFramePercent(0.15)
+            }
+          }
           .size(targetWidthPx, targetHeightPx)
           .crossfade(true)
           .placeholder(R.drawable.img_anime_cover_fallback)

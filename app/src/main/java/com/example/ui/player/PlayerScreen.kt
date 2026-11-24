@@ -1,11 +1,19 @@
 package com.example.ui.player
 
 import android.app.Activity
+import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.graphics.Color as AndroidColor
 import android.media.AudioManager
+import android.media.audiofx.Equalizer
+import android.media.audiofx.LoudnessEnhancer
 import android.net.Uri
+import android.os.BatteryManager
+import android.os.Build
+import android.util.Rational
+import android.util.TypedValue
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -41,17 +49,24 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.AspectRatio
+import androidx.compose.material.icons.rounded.Audiotrack
+import androidx.compose.material.icons.rounded.BatteryChargingFull
+import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.BrightnessHigh
 import androidx.compose.material.icons.rounded.ClosedCaption
 import androidx.compose.material.icons.rounded.ClosedCaptionDisabled
 import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.Forward10
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Replay10
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.Speed
-import androidx.compose.material.icons.rounded.Subtitles
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -77,6 +92,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -106,9 +122,14 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionOverride
+import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.PlayerView
 import com.example.R
 import com.example.ui.theme.ObsidianBackground
@@ -121,6 +142,9 @@ import com.example.util.TimeFormatters
 import com.example.util.scaleOnPress
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.roundToInt
 
 private enum class GestureKind {
@@ -146,12 +170,17 @@ fun PlayerScreen(
   val lifecycleOwner = LocalLifecycleOwner.current
   val activity = context as? Activity
   val state by viewModel.uiState.collectAsStateWithLifecycle()
+  val latestState by rememberUpdatedState(state)
 
   val audioManager = remember {
     context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
   }
+  val batteryManager = remember {
+    context.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
+  }
 
   var controlsVisible by remember { mutableStateOf(true) }
+  var isScreenLocked by remember { mutableStateOf(false) }
   var interactionNonce by remember { mutableIntStateOf(0) }
   var isPlaying by remember { mutableStateOf(false) }
   var isBuffering by remember { mutableStateOf(true) }
@@ -161,31 +190,65 @@ fun PlayerScreen(
   var isUserSeeking by remember { mutableStateOf(false) }
   var seekPreviewMs by remember { mutableLongStateOf(0L) }
   var showSpeedMenu by remember { mutableStateOf(false) }
-  var doubleTapFeedback by remember { mutableStateOf<Pair<Boolean, Int>?>(null) } // isForward, nonce
+  var showTrackDialog by remember { mutableStateOf(false) }
+  var showToolsDialog by remember { mutableStateOf(false) }
+  var doubleTapFeedback by remember { mutableStateOf<Pair<Boolean, Int>?>(null) }
   var gestureIndicator by remember { mutableStateOf<GestureIndicatorState?>(null) }
+  var feedbackToastText by remember { mutableStateOf<String?>(null) }
+  var accumulatedWatchMs by remember { mutableLongStateOf(0L) }
 
-  // Lightweight ExoPlayer configured for 2GB RAM target devices
+  var currentClockText by remember { mutableStateOf("") }
+  var batteryPercent by remember { mutableIntStateOf(100) }
+  var audioSessionId by remember { mutableIntStateOf(C.AUDIO_SESSION_ID_UNSET) }
+  var currentTracks by remember { mutableStateOf(Tracks.EMPTY) }
+
+  // Sleep Timer state
+  var sleepSecondsLeft by remember { mutableStateOf<Int?>(null) }
+  var sleepOnEpisodeEnd by remember { mutableStateOf(false) }
+
   val exoPlayer = remember(context) {
+    val (minBuf, maxBuf, startBuf, rebuf) = when (latestState.bufferProfile) {
+      "low_ram" -> listOf(5_000, 15_000, 1_000, 2_000)
+      "high" -> listOf(15_000, 50_000, 2_500, 5_000)
+      else -> listOf(10_000, 30_000, 1_500, 3_000)
+    }
     val loadControl = DefaultLoadControl.Builder()
-      .setBufferDurationsMs(10_000, 30_000, 1_500, 3_000)
+      .setBufferDurationsMs(minBuf, maxBuf, startBuf, rebuf)
       .build()
+
+    val renderersFactory = DefaultRenderersFactory(context).apply {
+      setEnableDecoderFallback(true)
+      val extMode = when (latestState.hardwareAccelerationMode) {
+        "software" -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+        else -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
+      }
+      setExtensionRendererMode(extMode)
+    }
 
     val audioAttrs = AudioAttributes.Builder()
       .setUsage(C.USAGE_MEDIA)
       .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
       .build()
 
-    ExoPlayer.Builder(context)
+    ExoPlayer.Builder(context, renderersFactory)
       .setLoadControl(loadControl)
       .setAudioAttributes(audioAttrs, true)
       .build()
   }
 
-  // Force landscape, immersive system bars, and keep screen on while playing video
-  DisposableEffect(activity, view) {
+  // Orientation & Keep Screen On
+  DisposableEffect(activity, view, state.orientationMode, state.keepScreenOn) {
     val window = activity?.window
-    activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-    window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    activity?.requestedOrientation = when (state.orientationMode) {
+      "locked_landscape" -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+      "system" -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+      else -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+    }
+    if (state.keepScreenOn) {
+      window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    } else {
+      window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
 
     val controller = window?.let { WindowCompat.getInsetsController(it, view) }
     controller?.systemBarsBehavior =
@@ -199,13 +262,68 @@ fun PlayerScreen(
     }
   }
 
-  // Handle ExoPlayer listener & release on exit
+  // VLC Equalizer & LoudnessEnhancer tied to ExoPlayer audioSessionId
+  DisposableEffect(audioSessionId, state.audioEqualizerPreset, state.audioBoostPercent) {
+    var equalizer: Equalizer? = null
+    var enhancer: LoudnessEnhancer? = null
+    if (audioSessionId != C.AUDIO_SESSION_ID_UNSET && audioSessionId != 0) {
+      runCatching {
+        equalizer = Equalizer(0, audioSessionId).apply {
+          val bands = numberOfBands.toInt()
+          val minLvl = bandLevelRange[0].toInt()
+          val maxLvl = bandLevelRange[1].toInt()
+          for (i in 0 until bands) {
+            val ratio = when (state.audioEqualizerPreset) {
+              "anime" -> when {
+                i == 0 -> 0.1f
+                i in 1..bands - 2 -> 0.55f
+                else -> 0.45f
+              }
+              "bass" -> if (i <= 1) 0.85f else 0.1f
+              "cinema" -> if (i == 0 || i == bands - 1) 0.65f else 0.3f
+              "night" -> if (i == 0) -0.3f else 0.35f
+              else -> 0f
+            }
+            val level = (ratio * (maxLvl - minLvl) * 0.45f).roundToInt().coerceIn(minLvl, maxLvl)
+            setBandLevel(i.toShort(), level.toShort())
+          }
+          enabled = state.audioEqualizerPreset != "normal"
+        }
+      }
+      runCatching {
+        enhancer = LoudnessEnhancer(audioSessionId).apply {
+          val gainMb = ((state.audioBoostPercent - 100) * 15).coerceAtLeast(0)
+          setTargetGain(gainMb)
+          enabled = state.audioBoostPercent > 100
+        }
+      }
+    }
+    onDispose {
+      runCatching { equalizer?.release() }
+      runCatching { enhancer?.release() }
+    }
+  }
+
   DisposableEffect(exoPlayer) {
     val listener = object : Player.Listener {
+      override fun onAudioSessionIdChanged(id: Int) {
+        audioSessionId = id
+      }
+
+      override fun onTracksChanged(tracks: Tracks) {
+        currentTracks = tracks
+      }
+
       override fun onIsPlayingChanged(playing: Boolean) {
         isPlaying = playing
         if (!playing) {
-          viewModel.saveProgress(exoPlayer.currentPosition, exoPlayer.duration.coerceAtLeast(0L))
+          val delta = accumulatedWatchMs
+          accumulatedWatchMs = 0L
+          viewModel.saveProgress(
+            positionMs = exoPlayer.currentPosition,
+            durationMs = exoPlayer.duration.coerceAtLeast(0L),
+            watchedDeltaMs = delta
+          )
         }
       }
 
@@ -215,10 +333,25 @@ fun PlayerScreen(
           playbackError = false
           val dur = exoPlayer.duration.coerceAtLeast(0L)
           if (dur > 0L) totalDurationMs = dur
+          audioSessionId = exoPlayer.audioSessionId
         } else if (playbackState == Player.STATE_ENDED) {
           val dur = exoPlayer.duration.coerceAtLeast(0L)
-          viewModel.saveProgress(dur, dur)
-          controlsVisible = true
+          val delta = accumulatedWatchMs
+          accumulatedWatchMs = 0L
+          viewModel.saveProgress(dur, dur, watchedDeltaMs = delta)
+
+          if (sleepOnEpisodeEnd) {
+            sleepOnEpisodeEnd = false
+            controlsVisible = true
+            return
+          }
+
+          val next = latestState.nextEpisode
+          if (latestState.autoPlayNextEpisode && next != null) {
+            viewModel.loadEpisode(next.id)
+          } else {
+            controlsVisible = true
+          }
         }
       }
 
@@ -230,18 +363,32 @@ fun PlayerScreen(
     }
     exoPlayer.addListener(listener)
     onDispose {
-      viewModel.saveProgress(exoPlayer.currentPosition, exoPlayer.duration.coerceAtLeast(0L))
+      val delta = accumulatedWatchMs
+      accumulatedWatchMs = 0L
+      viewModel.saveProgress(
+        positionMs = exoPlayer.currentPosition,
+        durationMs = exoPlayer.duration.coerceAtLeast(0L),
+        watchedDeltaMs = delta
+      )
       exoPlayer.removeListener(listener)
       exoPlayer.release()
     }
   }
 
-  // Pause and persist position when lifecycle pauses
   DisposableEffect(lifecycleOwner, exoPlayer) {
     val observer = LifecycleEventObserver { _, event ->
       if (event == Lifecycle.Event.ON_PAUSE) {
-        exoPlayer.pause()
-        viewModel.saveProgress(exoPlayer.currentPosition, exoPlayer.duration.coerceAtLeast(0L))
+        val inPip = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && activity?.isInPictureInPictureMode == true
+        if (!inPip) {
+          exoPlayer.pause()
+        }
+        val delta = accumulatedWatchMs
+        accumulatedWatchMs = 0L
+        viewModel.saveProgress(
+          positionMs = exoPlayer.currentPosition,
+          durationMs = exoPlayer.duration.coerceAtLeast(0L),
+          watchedDeltaMs = delta
+        )
       }
     }
     lifecycleOwner.lifecycle.addObserver(observer)
@@ -250,22 +397,25 @@ fun PlayerScreen(
     }
   }
 
-  // Load or reload MediaItem when episode or external subtitle changes
   val episode = state.currentEpisode
   LaunchedEffect(episode?.id, state.subtitleUri, state.subtitleMimeType) {
     if (episode != null) {
       playbackError = false
       isBuffering = true
 
-      val resumePosition = if (exoPlayer.currentMediaItem?.mediaId == episode.id.toString()) {
-        exoPlayer.currentPosition.coerceAtLeast(0L)
-      } else {
-        val saved = episode.lastPositionMs
-        val dur = episode.durationMs
-        if (saved > 0L && !episode.isWatched && (dur <= 0L || saved < (dur * 0.90).toLong())) {
-          saved
-        } else {
-          0L
+      val resumePosition = when {
+        state.requestedStartPositionMs >= 0L -> state.requestedStartPositionMs
+        exoPlayer.currentMediaItem?.mediaId == episode.id.toString() ->
+          exoPlayer.currentPosition.coerceAtLeast(0L)
+        else -> {
+          val saved = episode.lastPositionMs
+          val dur = episode.durationMs
+          val thresholdFraction = state.watchedThresholdPercent / 100.0
+          if (saved > 0L && !episode.isWatched && (dur <= 0L || saved < (dur * thresholdFraction).toLong())) {
+            saved
+          } else {
+            0L
+          }
         }
       }
 
@@ -282,12 +432,17 @@ fun PlayerScreen(
         mediaItemBuilder.setSubtitleConfigurations(listOf(subConfig))
       }
 
-      exoPlayer.setMediaItem(mediaItemBuilder.build(), resumePosition)
-      exoPlayer.playbackParameters = PlaybackParameters(state.playbackSpeed)
-      exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
+      val paramBuilder = exoPlayer.trackSelectionParameters
         .buildUpon()
         .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !state.subtitlesEnabled)
-        .build()
+      if (state.preferredAudioLanguage != "auto") {
+        paramBuilder.setPreferredAudioLanguage(state.preferredAudioLanguage)
+      }
+
+      exoPlayer.setMediaItem(mediaItemBuilder.build(), resumePosition)
+      exoPlayer.playbackParameters = PlaybackParameters(state.playbackSpeed)
+      exoPlayer.skipSilenceEnabled = state.skipSilence
+      exoPlayer.trackSelectionParameters = paramBuilder.build()
       exoPlayer.prepare()
       exoPlayer.playWhenReady = true
 
@@ -296,7 +451,6 @@ fun PlayerScreen(
     }
   }
 
-  // Apply subtitle toggle without reloading media
   LaunchedEffect(state.subtitlesEnabled) {
     exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
       .buildUpon()
@@ -304,14 +458,19 @@ fun PlayerScreen(
       .build()
   }
 
-  // Apply playback speed
   LaunchedEffect(state.playbackSpeed) {
     exoPlayer.playbackParameters = PlaybackParameters(state.playbackSpeed)
   }
 
-  // Update UI seekbar every 250ms and save progress to Room every 5 seconds while playing
+  LaunchedEffect(state.skipSilence) {
+    exoPlayer.skipSilenceEnabled = state.skipSilence
+  }
+
+  // Seekbar polling, clock/battery, sleep timer countdown, and 5s progress save
   LaunchedEffect(exoPlayer, episode?.id) {
     var elapsedSaveMs = 0L
+    var secondTickMs = 0L
+    val clockFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     while (isActive) {
       delay(250L)
       if (!isUserSeeking && exoPlayer.playbackState != Player.STATE_IDLE) {
@@ -321,31 +480,59 @@ fun PlayerScreen(
         if (dur > 0L) totalDurationMs = dur
       }
       if (exoPlayer.isPlaying) {
+        accumulatedWatchMs += 250L
         elapsedSaveMs += 250L
         if (elapsedSaveMs >= 5000L) {
           elapsedSaveMs = 0L
+          val delta = accumulatedWatchMs
+          accumulatedWatchMs = 0L
           viewModel.saveProgress(
             positionMs = exoPlayer.currentPosition,
-            durationMs = exoPlayer.duration.coerceAtLeast(0L)
+            durationMs = exoPlayer.duration.coerceAtLeast(0L),
+            watchedDeltaMs = delta
           )
+        }
+      }
+      secondTickMs += 250L
+      if (secondTickMs >= 1000L) {
+        secondTickMs = 0L
+        currentClockText = clockFormat.format(Date())
+        batteryPercent = batteryManager
+          ?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+          ?.coerceIn(0, 100) ?: 100
+
+        sleepSecondsLeft?.let { rem ->
+          if (rem <= 1) {
+            sleepSecondsLeft = null
+            exoPlayer.pause()
+            controlsVisible = true
+          } else {
+            sleepSecondsLeft = rem - 1
+          }
         }
       }
     }
   }
 
-  // Auto-hide controls after 3 seconds when playing
-  LaunchedEffect(controlsVisible, isPlaying, interactionNonce, showSpeedMenu) {
-    if (controlsVisible && isPlaying && !showSpeedMenu && !playbackError) {
-      delay(3000L)
+  LaunchedEffect(controlsVisible, isPlaying, interactionNonce, showSpeedMenu, showTrackDialog, showToolsDialog, isScreenLocked) {
+    val autoHideSec = state.controlsAutoHideSeconds
+    if (controlsVisible && isPlaying && !showSpeedMenu && !showTrackDialog && !showToolsDialog && !playbackError && autoHideSec > 0) {
+      delay(autoHideSec * 1000L)
       controlsVisible = false
     }
   }
 
-  // Auto-clear double tap feedback badge
   LaunchedEffect(doubleTapFeedback) {
     if (doubleTapFeedback != null) {
       delay(650L)
       doubleTapFeedback = null
+    }
+  }
+
+  LaunchedEffect(feedbackToastText) {
+    if (feedbackToastText != null) {
+      delay(1800L)
+      feedbackToastText = null
     }
   }
 
@@ -363,14 +550,32 @@ fun PlayerScreen(
     }
   }
 
-  BackHandler {
-    viewModel.saveProgress(exoPlayer.currentPosition, exoPlayer.duration.coerceAtLeast(0L))
+  val exitPlayer: () -> Unit = {
+    val delta = accumulatedWatchMs
+    accumulatedWatchMs = 0L
+    viewModel.saveProgress(
+      positionMs = exoPlayer.currentPosition,
+      durationMs = exoPlayer.duration.coerceAtLeast(0L),
+      watchedDeltaMs = delta
+    )
     onBack()
   }
 
-  val exitPlayer: () -> Unit = {
-    viewModel.saveProgress(exoPlayer.currentPosition, exoPlayer.duration.coerceAtLeast(0L))
-    onBack()
+  BackHandler {
+    if (isScreenLocked) {
+      isScreenLocked = false
+      controlsVisible = true
+    } else {
+      exitPlayer()
+    }
+  }
+
+  val aspectLabel = when (state.aspectRatioMode) {
+    "fill" -> stringResource(R.string.settings_aspect_fill)
+    "zoom" -> stringResource(R.string.settings_aspect_zoom)
+    "16_9" -> stringResource(R.string.settings_aspect_16_9)
+    "4_3" -> stringResource(R.string.settings_aspect_4_3)
+    else -> stringResource(R.string.settings_aspect_fit)
   }
 
   BoxWithConstraints(
@@ -382,7 +587,6 @@ fun PlayerScreen(
     val containerWidthPx = constraints.maxWidth.toFloat().coerceAtLeast(1f)
     val containerHeightPx = constraints.maxHeight.toFloat().coerceAtLeast(1f)
 
-    // Media3 PlayerView surface (custom controls disabled; SubtitleView enabled)
     AndroidView(
       factory = { ctx ->
         PlayerView(ctx).apply {
@@ -395,11 +599,50 @@ fun PlayerScreen(
         if (playerView.player !== exoPlayer) {
           playerView.player = exoPlayer
         }
+        playerView.keepScreenOn = state.keepScreenOn
+
+        // Apply VLC Aspect Ratio / Resize Mode
+        playerView.resizeMode = when (state.aspectRatioMode) {
+          "fill" -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+          "zoom" -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+          else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+        }
+        val frameLayout = playerView.findViewById<AspectRatioFrameLayout>(androidx.media3.ui.R.id.exo_content_frame)
+        when (state.aspectRatioMode) {
+          "16_9" -> frameLayout?.setAspectRatio(16f / 9f)
+          "4_3" -> frameLayout?.setAspectRatio(4f / 3f)
+          else -> Unit
+        }
+
+        // Apply VLC Subtitle Styling
+        playerView.subtitleView?.let { subView ->
+          subView.setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, state.subtitleFontSizeSp.toFloat())
+          val fg = when (state.subtitleColorPreset) {
+            "yellow" -> AndroidColor.YELLOW
+            "orange" -> AndroidColor.parseColor("#FF8800")
+            "cyan" -> AndroidColor.CYAN
+            else -> AndroidColor.WHITE
+          }
+          val bg = if (state.subtitleBackgroundBox) {
+            AndroidColor.argb(145, 0, 0, 0)
+          } else {
+            AndroidColor.TRANSPARENT
+          }
+          subView.setStyle(
+            CaptionStyleCompat(
+              fg,
+              bg,
+              AndroidColor.TRANSPARENT,
+              CaptionStyleCompat.EDGE_TYPE_OUTLINE,
+              AndroidColor.BLACK,
+              null
+            )
+          )
+        }
       },
       modifier = Modifier.fillMaxSize()
     )
 
-    // Gesture layer: single tap (toggle controls), double tap (+/-10s), vertical swipe (brightness/volume)
     var dragBrightness by remember { mutableFloatStateOf(0.5f) }
     var dragVolume by remember { mutableFloatStateOf(0.5f) }
     var activeGestureKind by remember { mutableStateOf<GestureKind?>(null) }
@@ -407,27 +650,31 @@ fun PlayerScreen(
     Box(
       modifier = Modifier
         .fillMaxSize()
-        .pointerInput(exoPlayer) {
+        .pointerInput(exoPlayer, isScreenLocked, state.enableDoubleTapSeek, state.seekJumpSeconds) {
           detectTapGestures(
             onTap = {
               controlsVisible = !controlsVisible
               interactionNonce++
             },
             onDoubleTap = { offset ->
-              val isForward = offset.x >= containerWidthPx / 2f
-              val delta = if (isForward) 10_000L else -10_000L
-              val maxDur = exoPlayer.duration.takeIf { it > 0L } ?: Long.MAX_VALUE
-              val target = (exoPlayer.currentPosition + delta).coerceIn(0L, maxDur)
-              exoPlayer.seekTo(target)
-              currentPositionMs = target
-              doubleTapFeedback = isForward to ((doubleTapFeedback?.second ?: 0) + 1)
-              interactionNonce++
+              if (!isScreenLocked && state.enableDoubleTapSeek) {
+                val isForward = offset.x >= containerWidthPx / 2f
+                val jumpMs = state.seekJumpSeconds * 1000L
+                val delta = if (isForward) jumpMs else -jumpMs
+                val maxDur = exoPlayer.duration.takeIf { it > 0L } ?: Long.MAX_VALUE
+                val target = (exoPlayer.currentPosition + delta).coerceIn(0L, maxDur)
+                exoPlayer.seekTo(target)
+                currentPositionMs = target
+                doubleTapFeedback = isForward to ((doubleTapFeedback?.second ?: 0) + 1)
+                interactionNonce++
+              }
             }
           )
         }
-        .pointerInput(activity, audioManager) {
+        .pointerInput(activity, audioManager, isScreenLocked, state.enableBrightnessVolumeGestures) {
           detectVerticalDragGestures(
             onDragStart = { startOffset ->
+              if (isScreenLocked || !state.enableBrightnessVolumeGestures) return@detectVerticalDragGestures
               val isLeft = startOffset.x < containerWidthPx / 2f
               activeGestureKind = if (isLeft) GestureKind.BRIGHTNESS else GestureKind.VOLUME
               if (isLeft) {
@@ -456,6 +703,7 @@ fun PlayerScreen(
               gestureIndicator = null
             },
             onVerticalDrag = { _, dragAmount ->
+              if (isScreenLocked || !state.enableBrightnessVolumeGestures) return@detectVerticalDragGestures
               val deltaFraction = -dragAmount / (containerHeightPx * 0.7f)
               when (activeGestureKind) {
                 GestureKind.BRIGHTNESS -> {
@@ -470,7 +718,6 @@ fun PlayerScreen(
                     (dragBrightness * 100f).roundToInt().coerceIn(1, 100)
                   )
                 }
-
                 GestureKind.VOLUME -> {
                   dragVolume = (dragVolume + deltaFraction).coerceIn(0f, 1f)
                   val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
@@ -481,7 +728,6 @@ fun PlayerScreen(
                     (dragVolume * 100f).roundToInt().coerceIn(0, 100)
                   )
                 }
-
                 null -> Unit
               }
             }
@@ -489,7 +735,6 @@ fun PlayerScreen(
         }
     )
 
-    // Double-tap seek visual badge
     doubleTapFeedback?.let { (isForward, _) ->
       Box(
         modifier = Modifier
@@ -515,7 +760,8 @@ fun PlayerScreen(
             )
             Text(
               text = stringResource(
-                if (isForward) R.string.player_seek_forward_badge else R.string.player_seek_backward_badge
+                if (isForward) R.string.player_seek_forward_badge else R.string.player_seek_backward_badge,
+                state.seekJumpSeconds
               ),
               style = MaterialTheme.typography.titleSmall,
               color = MaterialTheme.colorScheme.onBackground
@@ -525,7 +771,6 @@ fun PlayerScreen(
       }
     }
 
-    // Brightness / Volume gesture indicator
     gestureIndicator?.let { indicator ->
       Surface(
         color = ObsidianBackground.copy(alpha = 0.85f),
@@ -586,7 +831,25 @@ fun PlayerScreen(
       }
     }
 
-    // Loading state
+    feedbackToastText?.let { toastText ->
+      Surface(
+        color = ObsidianBackground.copy(alpha = 0.88f),
+        shape = RoundedCornerShape(50),
+        modifier = Modifier
+          .align(Alignment.TopCenter)
+          .windowInsetsPadding(WindowInsets.safeDrawing)
+          .padding(top = 64.dp)
+          .border(1.dp, VlcOrange.copy(alpha = 0.6f), RoundedCornerShape(50))
+      ) {
+        Text(
+          text = toastText,
+          style = MaterialTheme.typography.labelMedium,
+          color = VlcOrange,
+          modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+      }
+    }
+
     if ((isBuffering || state.isLoadingEpisode) && !playbackError && state.errorMessage == null) {
       Column(
         modifier = Modifier.align(Alignment.Center),
@@ -602,7 +865,6 @@ fun PlayerScreen(
       }
     }
 
-    // Error state (corrupt or missing file)
     if (playbackError || state.errorMessage != null) {
       PlayerErrorOverlay(
         onRetry = {
@@ -615,9 +877,48 @@ fun PlayerScreen(
       )
     }
 
-    // Custom VLC + Netflix Compose controls overlay
+    // Screen Locked Overlay (only Unlock button)
     AnimatedVisibility(
-      visible = controlsVisible && !playbackError && state.errorMessage == null,
+      visible = controlsVisible && isScreenLocked && !playbackError && state.errorMessage == null,
+      enter = fadeIn(),
+      exit = fadeOut(),
+      modifier = Modifier
+        .align(Alignment.CenterStart)
+        .windowInsetsPadding(WindowInsets.safeDrawing)
+        .padding(16.dp)
+    ) {
+      Surface(
+        onClick = {
+          isScreenLocked = false
+          controlsVisible = true
+          interactionNonce++
+        },
+        color = ObsidianBackground.copy(alpha = 0.85f),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.border(1.dp, VlcOrange, RoundedCornerShape(16.dp))
+      ) {
+        Row(
+          modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          Icon(
+            imageVector = Icons.Rounded.LockOpen,
+            contentDescription = stringResource(R.string.player_unlock_screen),
+            tint = VlcOrange
+          )
+          Text(
+            text = stringResource(R.string.player_screen_locked_hint),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onBackground
+          )
+        }
+      }
+    }
+
+    // Full VLC Controls Overlay
+    AnimatedVisibility(
+      visible = controlsVisible && !isScreenLocked && !playbackError && state.errorMessage == null,
       enter = fadeIn(),
       exit = fadeOut(),
       modifier = Modifier.fillMaxSize()
@@ -674,26 +975,75 @@ fun PlayerScreen(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
               )
-              if (state.subtitleDisplayName != null) {
-                Text(
-                  text = stringResource(
-                    R.string.player_subtitle_loaded,
-                    state.subtitleDisplayName.orEmpty()
-                  ),
-                  style = MaterialTheme.typography.labelSmall,
-                  color = VlcOrange,
-                  maxLines = 1,
-                  overflow = TextOverflow.Ellipsis
-                )
+              Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                if (state.subtitleDisplayName != null) {
+                  Text(
+                    text = stringResource(
+                      R.string.player_subtitle_loaded,
+                      state.subtitleDisplayName.orEmpty()
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = VlcOrange,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                  )
+                }
+                if (state.showClockAndBattery) {
+                  Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                  ) {
+                    Text(
+                      text = currentClockText,
+                      style = MaterialTheme.typography.labelSmall,
+                      color = SecondaryGray
+                    )
+                    Icon(
+                      imageVector = Icons.Rounded.BatteryChargingFull,
+                      contentDescription = null,
+                      tint = SecondaryGray,
+                      modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                      text = stringResource(R.string.player_battery_label, batteryPercent),
+                      style = MaterialTheme.typography.labelSmall,
+                      color = SecondaryGray
+                    )
+                  }
+                }
+                sleepSecondsLeft?.let { remSec ->
+                  Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                  ) {
+                    Icon(
+                      imageVector = Icons.Rounded.Bedtime,
+                      contentDescription = null,
+                      tint = VlcOrange,
+                      modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                      text = stringResource(
+                        R.string.player_sleep_remaining,
+                        TimeFormatters.formatDuration(remSec * 1000L)
+                      ),
+                      style = MaterialTheme.typography.labelSmall,
+                      color = VlcOrange
+                    )
+                  }
+                }
               }
             }
           }
 
           Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
           ) {
-            // Toggle subtitles On/Off
             IconButton(
               onClick = {
                 viewModel.toggleSubtitles()
@@ -716,39 +1066,22 @@ fun PlayerScreen(
               )
             }
 
-            // Pick subtitle fallback button (SAF)
-            TextButton(
+            IconButton(
               onClick = {
+                showTrackDialog = true
                 interactionNonce++
-                subtitlePickerLauncher.launch(
-                  arrayOf(
-                    "application/x-subrip",
-                    "text/plain",
-                    "text/x-ssa",
-                    "application/octet-stream",
-                    "*/*"
-                  )
-                )
               },
               modifier = Modifier
                 .minimumInteractiveComponentSize()
-                .testTag("player_select_subtitle_button")
+                .testTag("player_tracks_button")
             ) {
               Icon(
-                imageVector = Icons.Rounded.Subtitles,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.size(18.dp)
-              )
-              Spacer(modifier = Modifier.width(6.dp))
-              Text(
-                text = stringResource(R.string.player_select_subtitle),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onBackground
+                imageVector = Icons.Rounded.Audiotrack,
+                contentDescription = stringResource(R.string.player_tracks_title),
+                tint = MaterialTheme.colorScheme.onBackground
               )
             }
 
-            // Speed selector (0.5x - 2.0x)
             Box {
               TextButton(
                 onClick = {
@@ -795,10 +1128,26 @@ fun PlayerScreen(
                 }
               }
             }
+
+            IconButton(
+              onClick = {
+                showToolsDialog = true
+                interactionNonce++
+              },
+              modifier = Modifier
+                .minimumInteractiveComponentSize()
+                .testTag("player_tools_button")
+            ) {
+              Icon(
+                imageVector = Icons.Rounded.Tune,
+                contentDescription = stringResource(R.string.player_more_tools),
+                tint = VlcOrange
+              )
+            }
           }
         }
 
-        // Center Transport Controls (-10s, Play/Pause, +10s)
+        // Center Transport Controls
         Row(
           modifier = Modifier.align(Alignment.Center),
           verticalAlignment = Alignment.CenterVertically,
@@ -806,7 +1155,7 @@ fun PlayerScreen(
         ) {
           IconButton(
             onClick = {
-              val target = (exoPlayer.currentPosition - 10_000L).coerceAtLeast(0L)
+              val target = (exoPlayer.currentPosition - state.seekJumpSeconds * 1000L).coerceAtLeast(0L)
               exoPlayer.seekTo(target)
               currentPositionMs = target
               interactionNonce++
@@ -819,7 +1168,7 @@ fun PlayerScreen(
           ) {
             Icon(
               imageVector = Icons.Rounded.Replay10,
-              contentDescription = stringResource(R.string.player_rewind_10),
+              contentDescription = stringResource(R.string.player_rewind_10, state.seekJumpSeconds),
               tint = MaterialTheme.colorScheme.onBackground,
               modifier = Modifier.size(30.dp)
             )
@@ -861,7 +1210,7 @@ fun PlayerScreen(
           IconButton(
             onClick = {
               val maxDur = exoPlayer.duration.takeIf { it > 0L } ?: Long.MAX_VALUE
-              val target = (exoPlayer.currentPosition + 10_000L).coerceIn(0L, maxDur)
+              val target = (exoPlayer.currentPosition + state.seekJumpSeconds * 1000L).coerceIn(0L, maxDur)
               exoPlayer.seekTo(target)
               currentPositionMs = target
               interactionNonce++
@@ -874,19 +1223,19 @@ fun PlayerScreen(
           ) {
             Icon(
               imageVector = Icons.Rounded.Forward10,
-              contentDescription = stringResource(R.string.player_forward_10),
+              contentDescription = stringResource(R.string.player_forward_10, state.seekJumpSeconds),
               tint = MaterialTheme.colorScheme.onBackground,
               modifier = Modifier.size(30.dp)
             )
           }
         }
 
-        // Bottom SeekBar & Next Episode
+        // Bottom Seekbar + VLC Action Strip (Lock, Aspect Ratio, Skip OP, Next Ep)
         Column(
           modifier = Modifier
             .fillMaxWidth()
             .align(Alignment.BottomCenter),
-          verticalArrangement = Arrangement.spacedBy(2.dp)
+          verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
           val displayedPosition = if (isUserSeeking) seekPreviewMs else currentPositionMs
           val safeDuration = totalDurationMs.coerceAtLeast(1L)
@@ -913,7 +1262,7 @@ fun PlayerScreen(
                 exoPlayer.seekTo(seekPreviewMs)
                 currentPositionMs = seekPreviewMs
                 isUserSeeking = false
-                viewModel.saveProgress(seekPreviewMs, totalDurationMs)
+                viewModel.saveProgress(seekPreviewMs, totalDurationMs, watchedDeltaMs = 0L)
                 interactionNonce++
               },
               valueRange = 0f..safeDuration.toFloat(),
@@ -934,18 +1283,94 @@ fun PlayerScreen(
             )
           }
 
-          val nextEp = state.nextEpisode
-          if (nextEp != null) {
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
             Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.End
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+              IconButton(
+                onClick = {
+                  isScreenLocked = true
+                  controlsVisible = true
+                },
+                modifier = Modifier
+                  .minimumInteractiveComponentSize()
+                  .testTag("player_lock_button")
+              ) {
+                Icon(
+                  imageVector = Icons.Rounded.Lock,
+                  contentDescription = stringResource(R.string.player_lock_screen),
+                  tint = MaterialTheme.colorScheme.onBackground
+                )
+              }
+
+              TextButton(
+                onClick = {
+                  viewModel.cycleAspectRatio()
+                  interactionNonce++
+                },
+                modifier = Modifier
+                  .minimumInteractiveComponentSize()
+                  .testTag("player_aspect_button")
+              ) {
+                Icon(
+                  imageVector = Icons.Rounded.AspectRatio,
+                  contentDescription = stringResource(R.string.player_aspect_ratio),
+                  tint = MaterialTheme.colorScheme.onBackground,
+                  modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                  text = aspectLabel,
+                  style = MaterialTheme.typography.labelSmall,
+                  color = MaterialTheme.colorScheme.onBackground
+                )
+              }
+
+              OutlinedButton(
+                onClick = {
+                  val maxDur = exoPlayer.duration.takeIf { it > 0L } ?: Long.MAX_VALUE
+                  val target = (exoPlayer.currentPosition + state.skipIntroDurationSeconds * 1000L)
+                    .coerceIn(0L, maxDur)
+                  exoPlayer.seekTo(target)
+                  currentPositionMs = target
+                  interactionNonce++
+                },
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier
+                  .height(38.dp)
+                  .testTag("player_skip_op_button")
+              ) {
+                Icon(
+                  imageVector = Icons.Rounded.FastForward,
+                  contentDescription = null,
+                  tint = VlcOrange,
+                  modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                  text = stringResource(R.string.player_skip_op, state.skipIntroDurationSeconds),
+                  style = MaterialTheme.typography.labelSmall,
+                  color = VlcOrange
+                )
+              }
+            }
+
+            val nextEp = state.nextEpisode
+            if (nextEp != null) {
               val nextInteraction = remember { MutableInteractionSource() }
               Button(
                 onClick = {
+                  val delta = accumulatedWatchMs
+                  accumulatedWatchMs = 0L
                   viewModel.saveProgress(
                     exoPlayer.currentPosition,
-                    exoPlayer.duration.coerceAtLeast(0L)
+                    exoPlayer.duration.coerceAtLeast(0L),
+                    watchedDeltaMs = delta
                   )
                   viewModel.loadEpisode(nextEp.id)
                   interactionNonce++
@@ -957,7 +1382,7 @@ fun PlayerScreen(
                 ),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
-                  .height(48.dp)
+                  .height(44.dp)
                   .scaleOnPress(nextInteraction)
                   .border(1.dp, VlcOrange.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                   .testTag("player_next_episode_button")
@@ -965,12 +1390,12 @@ fun PlayerScreen(
                 Icon(
                   imageVector = Icons.Rounded.SkipNext,
                   contentDescription = null,
-                  modifier = Modifier.size(20.dp)
+                  modifier = Modifier.size(18.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                   text = "${stringResource(R.string.player_next_episode)} (Ep ${nextEp.number})",
-                  style = MaterialTheme.typography.labelLarge
+                  style = MaterialTheme.typography.labelMedium
                 )
               }
             }
@@ -979,6 +1404,113 @@ fun PlayerScreen(
       }
     }
   }
+
+  if (showTrackDialog) {
+    val audioTrackOptions = remember(currentTracks) {
+      extractTracksOfType(currentTracks, C.TRACK_TYPE_AUDIO)
+    }
+    val subTrackOptions = remember(currentTracks) {
+      extractTracksOfType(currentTracks, C.TRACK_TYPE_TEXT)
+    }
+    TrackSelectorDialog(
+      audioTracks = audioTrackOptions,
+      subtitleTracks = subTrackOptions,
+      onSelectAudioTrack = { opt ->
+        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
+          .buildUpon()
+          .setOverrideForType(TrackSelectionOverride(opt.mediaTrackGroup, opt.trackIndex))
+          .build()
+      },
+      onSelectSubtitleTrack = { opt ->
+        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
+          .buildUpon()
+          .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+          .setOverrideForType(TrackSelectionOverride(opt.mediaTrackGroup, opt.trackIndex))
+          .build()
+        if (!state.subtitlesEnabled) {
+          viewModel.toggleSubtitles()
+        }
+      },
+      onPickExternalSubtitle = {
+        subtitlePickerLauncher.launch(
+          arrayOf(
+            "application/x-subrip",
+            "text/plain",
+            "text/x-ssa",
+            "application/octet-stream",
+            "*/*"
+          )
+        )
+      },
+      onDismiss = { showTrackDialog = false }
+    )
+  }
+
+  if (showToolsDialog) {
+    val bookmarkSavedFmt = stringResource(R.string.player_bookmark_saved)
+    VlcToolsDialog(
+      eqPreset = state.audioEqualizerPreset,
+      audioBoostPercent = state.audioBoostPercent,
+      sleepMinutesRemaining = sleepSecondsLeft?.let { ((it + 59) / 60).coerceAtLeast(1) },
+      sleepOnEpisodeEnd = sleepOnEpisodeEnd,
+      canUsePip = state.enablePictureInPicture && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O,
+      onSelectEqPreset = viewModel::setEqualizerPreset,
+      onChangeAudioBoost = viewModel::setAudioBoostPercent,
+      onSelectSleepMinutes = { mins ->
+        sleepOnEpisodeEnd = false
+        sleepSecondsLeft = mins?.times(60)
+      },
+      onSelectSleepEndOfEpisode = {
+        sleepSecondsLeft = null
+        sleepOnEpisodeEnd = true
+      },
+      onAddBookmark = {
+        val pos = exoPlayer.currentPosition.coerceAtLeast(0L)
+        val formatted = TimeFormatters.formatDuration(pos)
+        viewModel.addBookmarkAt(pos, "${state.animeTitle} ($formatted)")
+        feedbackToastText = String.format(bookmarkSavedFmt, formatted)
+      },
+      onEnterPip = {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          runCatching {
+            activity?.enterPictureInPictureMode(
+              PictureInPictureParams.Builder()
+                .setAspectRatio(Rational(16, 9))
+                .build()
+            )
+          }
+        }
+      },
+      onDismiss = { showToolsDialog = false }
+    )
+  }
+}
+
+private fun extractTracksOfType(tracks: Tracks, trackType: Int): List<PlayerTrackOption> {
+  val list = mutableListOf<PlayerTrackOption>()
+  var counter = 1
+  for (group in tracks.groups) {
+    if (group.type != trackType) continue
+    for (i in 0 until group.length) {
+      if (!group.isTrackSupported(i)) continue
+      val format = group.getTrackFormat(i)
+      val lang = format.language?.takeIf { it.isNotBlank() && it != "und" } ?: "Auto"
+      val label = listOfNotNull(format.label?.takeIf { it.isNotBlank() }, lang.uppercase())
+        .distinct()
+        .joinToString(" • ")
+        .ifBlank { "Track $counter" }
+      list.add(
+        PlayerTrackOption(
+          mediaTrackGroup = group.mediaTrackGroup,
+          trackIndex = i,
+          label = label,
+          isSelected = group.isTrackSelected(i)
+        )
+      )
+      counter++
+    }
+  }
+  return list
 }
 
 @Composable

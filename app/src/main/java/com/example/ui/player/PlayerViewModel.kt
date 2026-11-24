@@ -8,13 +8,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MimeTypes
 import androidx.navigation.toRoute
+import com.example.data.local.entity.EpisodeBookmarkEntity
 import com.example.data.local.entity.EpisodeEntity
+import com.example.data.preferences.AppSettingsDataStore
 import com.example.data.repository.AnimeRepository
 import com.example.ui.navigation.PlayerRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -25,11 +28,35 @@ data class PlayerUiState(
   val animeTitle: String = "",
   val currentEpisode: EpisodeEntity? = null,
   val nextEpisode: EpisodeEntity? = null,
+  val requestedStartPositionMs: Long = -1L,
   val subtitleUri: String? = null,
   val subtitleMimeType: String = MimeTypes.APPLICATION_SUBRIP,
   val subtitleDisplayName: String? = null,
   val subtitlesEnabled: Boolean = true,
   val playbackSpeed: Float = 1.0f,
+  val autoPlayNextEpisode: Boolean = true,
+  val watchedThresholdPercent: Int = 90,
+  // VLC Mobile Advanced Settings
+  val hardwareAccelerationMode: String = "auto",
+  val aspectRatioMode: String = "fit",
+  val orientationMode: String = "sensor_landscape",
+  val enablePictureInPicture: Boolean = true,
+  val keepScreenOn: Boolean = true,
+  val audioEqualizerPreset: String = "normal",
+  val audioBoostPercent: Int = 100,
+  val skipSilence: Boolean = false,
+  val preferredAudioLanguage: String = "jpn",
+  val subtitleFontSizeSp: Int = 18,
+  val subtitleColorPreset: String = "white",
+  val subtitleBackgroundBox: Boolean = true,
+  val seekJumpSeconds: Int = 10,
+  val controlsAutoHideSeconds: Int = 3,
+  val enableBrightnessVolumeGestures: Boolean = true,
+  val enableDoubleTapSeek: Boolean = true,
+  val showClockAndBattery: Boolean = true,
+  val skipIntroDurationSeconds: Int = 85,
+  val bufferProfile: String = "balanced",
+  val bookmarks: List<EpisodeBookmarkEntity> = emptyList(),
   val errorMessage: String? = null
 )
 
@@ -37,21 +64,31 @@ data class PlayerUiState(
 class PlayerViewModel @Inject constructor(
   savedStateHandle: SavedStateHandle,
   private val repository: AnimeRepository,
+  private val settingsDataStore: AppSettingsDataStore,
   private val contentResolver: ContentResolver
 ) : ViewModel() {
 
   private val initialRoute: PlayerRoute = savedStateHandle.toRoute()
 
-  private val _uiState = MutableStateFlow(PlayerUiState())
+  private val _uiState = MutableStateFlow(
+    PlayerUiState(requestedStartPositionMs = initialRoute.startPositionMs)
+  )
   val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
   init {
-    loadEpisode(initialRoute.episodeId)
+    loadEpisode(initialRoute.episodeId, initialRoute.startPositionMs)
   }
 
-  fun loadEpisode(episodeId: Long) {
+  fun loadEpisode(episodeId: Long, explicitStartPosMs: Long = -1L) {
     viewModelScope.launch {
-      _uiState.update { it.copy(isLoadingEpisode = true, errorMessage = null) }
+      _uiState.update {
+        it.copy(
+          isLoadingEpisode = true,
+          errorMessage = null,
+          requestedStartPositionMs = explicitStartPosMs
+        )
+      }
+      val settings = settingsDataStore.settingsFlow.first()
       val withAnime = repository.getEpisodeWithAnime(episodeId)
       if (withAnime == null) {
         _uiState.update {
@@ -69,6 +106,7 @@ class PlayerViewModel @Inject constructor(
       val subName = resolvedSub?.let { resolveDisplayName(it) }
       val subMime = resolvedSub?.let { resolveSubtitleMimeType(it, subName) }
         ?: MimeTypes.APPLICATION_SUBRIP
+      val bookmarks = repository.observeBookmarksForEpisode(episode.id).first()
 
       _uiState.update {
         it.copy(
@@ -77,23 +115,48 @@ class PlayerViewModel @Inject constructor(
           animeTitle = withAnime.anime.title,
           currentEpisode = episode,
           nextEpisode = next,
+          requestedStartPositionMs = explicitStartPosMs,
           subtitleUri = resolvedSub,
           subtitleMimeType = subMime,
           subtitleDisplayName = subName,
-          subtitlesEnabled = true,
+          subtitlesEnabled = settings.autoEnableSubtitles,
+          playbackSpeed = settings.defaultPlaybackSpeed,
+          autoPlayNextEpisode = settings.autoPlayNextEpisode,
+          watchedThresholdPercent = settings.watchedThresholdPercent,
+          hardwareAccelerationMode = settings.hardwareAccelerationMode,
+          aspectRatioMode = settings.defaultAspectRatio,
+          orientationMode = settings.playerOrientationMode,
+          enablePictureInPicture = settings.enablePictureInPicture,
+          keepScreenOn = settings.keepScreenOn,
+          audioEqualizerPreset = settings.audioEqualizerPreset,
+          audioBoostPercent = settings.audioBoostPercent,
+          skipSilence = settings.skipSilence,
+          preferredAudioLanguage = settings.preferredAudioLanguage,
+          subtitleFontSizeSp = settings.subtitleFontSizeSp,
+          subtitleColorPreset = settings.subtitleColorPreset,
+          subtitleBackgroundBox = settings.subtitleBackgroundBox,
+          seekJumpSeconds = settings.seekJumpSeconds,
+          controlsAutoHideSeconds = settings.controlsAutoHideSeconds,
+          enableBrightnessVolumeGestures = settings.enableBrightnessVolumeGestures,
+          enableDoubleTapSeek = settings.enableDoubleTapSeek,
+          showClockAndBattery = settings.showClockAndBatteryInPlayer,
+          skipIntroDurationSeconds = settings.skipIntroDurationSeconds,
+          bufferProfile = settings.bufferProfile,
+          bookmarks = bookmarks,
           errorMessage = null
         )
       }
     }
   }
 
-  fun saveProgress(positionMs: Long, durationMs: Long) {
+  fun saveProgress(positionMs: Long, durationMs: Long, watchedDeltaMs: Long = 0L) {
     val episodeId = _uiState.value.currentEpisode?.id ?: return
     viewModelScope.launch {
       repository.savePlaybackProgress(
         episodeId = episodeId,
         positionMs = positionMs,
-        durationMs = durationMs
+        durationMs = durationMs,
+        watchedDeltaMs = watchedDeltaMs
       )
     }
   }
@@ -106,6 +169,40 @@ class PlayerViewModel @Inject constructor(
 
   fun setPlaybackSpeed(speed: Float) {
     _uiState.update { it.copy(playbackSpeed = speed) }
+  }
+
+  fun cycleAspectRatio(): String {
+    val order = listOf("fit", "fill", "zoom", "16_9", "4_3")
+    val current = _uiState.value.aspectRatioMode
+    val next = order[(order.indexOf(current) + 1) % order.size]
+    _uiState.update { it.copy(aspectRatioMode = next) }
+    return next
+  }
+
+  fun setEqualizerPreset(preset: String) {
+    _uiState.update { it.copy(audioEqualizerPreset = preset) }
+    viewModelScope.launch { settingsDataStore.setAudioEqualizerPreset(preset) }
+  }
+
+  fun setAudioBoostPercent(percent: Int) {
+    val clamped = percent.coerceIn(100, 200)
+    _uiState.update { it.copy(audioBoostPercent = clamped) }
+    viewModelScope.launch { settingsDataStore.setAudioBoostPercent(clamped) }
+  }
+
+  fun addBookmarkAt(positionMs: Long, label: String) {
+    val ep = _uiState.value.currentEpisode ?: return
+    viewModelScope.launch {
+      repository.addBookmark(
+        episodeId = ep.id,
+        animeId = ep.animeId,
+        episodeNumber = ep.number,
+        positionMs = positionMs,
+        label = label
+      )
+      val refreshed = repository.observeBookmarksForEpisode(ep.id).first()
+      _uiState.update { it.copy(bookmarks = refreshed) }
+    }
   }
 
   fun onSubtitlePicked(uriString: String) {

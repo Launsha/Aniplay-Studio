@@ -28,6 +28,9 @@ interface AnimeDao {
   @Query("SELECT * FROM anime WHERE title = :title LIMIT 1")
   suspend fun getByTitle(title: String): AnimeEntity?
 
+  @Query("SELECT * FROM anime WHERE id = :animeId LIMIT 1")
+  suspend fun getById(animeId: Long): AnimeEntity?
+
   @Query("SELECT * FROM anime")
   suspend fun getAllSync(): List<AnimeEntity>
 
@@ -40,8 +43,49 @@ interface AnimeDao {
   @Query("UPDATE anime SET lastPlayedAt = :timestamp WHERE id = :animeId")
   suspend fun updateLastPlayedAt(animeId: Long, timestamp: Long)
 
-  @Query("UPDATE anime SET genre = :genre, releaseYear = :releaseYear WHERE id = :animeId")
-  suspend fun updateMetadata(animeId: Long, genre: String, releaseYear: Int?)
+  @Query(
+    """
+    UPDATE anime
+    SET title = :title,
+        customCoverUri = :customCoverUri,
+        synopsis = :synopsis,
+        genre = :genre,
+        releaseDate = :releaseDate,
+        releaseYear = :releaseYear,
+        isUserEdited = 1
+    WHERE id = :animeId
+    """
+  )
+  suspend fun updateEditableDetails(
+    animeId: Long,
+    title: String,
+    customCoverUri: String?,
+    synopsis: String,
+    genre: String,
+    releaseDate: String,
+    releaseYear: Int?
+  )
+
+  @Query(
+    """
+    UPDATE anime
+    SET malId = :malId,
+        malScore = :malScore,
+        malStatus = :malStatus,
+        malUserScore = :malUserScore
+    WHERE id = :animeId
+    """
+  )
+  suspend fun updateMalTracking(
+    animeId: Long,
+    malId: Int?,
+    malScore: Double?,
+    malStatus: String,
+    malUserScore: Int?
+  )
+
+  @Query("UPDATE anime SET isFavorite = :isFavorite WHERE id = :animeId")
+  suspend fun setFavorite(animeId: Long, isFavorite: Boolean)
 
   @Query("DELETE FROM anime WHERE id NOT IN (SELECT DISTINCT animeId FROM episodes)")
   suspend fun deleteEmptyAnime()
