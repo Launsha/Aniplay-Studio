@@ -194,6 +194,36 @@ fun VlcVideoSettingsSection(
       checked = settings.keepScreenOn,
       onCheckedChange = viewModel::setKeepScreenOn
     )
+
+    HorizontalDivider(color = ObsidianBorder)
+
+    SettingsToggleRow(
+      title = stringResource(R.string.settings_pinch_zoom),
+      subtitle = stringResource(R.string.settings_pinch_zoom_desc),
+      checked = settings.enablePinchZoom,
+      onCheckedChange = viewModel::setEnablePinchZoom
+    )
+
+    HorizontalDivider(color = ObsidianBorder)
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+      Text(
+        text = stringResource(R.string.player_night_dimmer_title, settings.nightDimmerPercent),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurface
+      )
+      Slider(
+        value = settings.nightDimmerPercent.toFloat(),
+        onValueChange = { viewModel.setNightDimmerPercent(it.roundToInt()) },
+        valueRange = 0f..60f,
+        steps = 5,
+        colors = SliderDefaults.colors(
+          thumbColor = VlcOrange,
+          activeTrackColor = VlcOrange,
+          inactiveTrackColor = ObsidianSurfaceElevated
+        )
+      )
+    }
   }
 }
 
@@ -244,6 +274,15 @@ fun VlcAudioSettingsSection(
       subtitle = stringResource(R.string.settings_skip_silence_desc),
       checked = settings.skipSilence,
       onCheckedChange = viewModel::setSkipSilence
+    )
+
+    HorizontalDivider(color = ObsidianBorder)
+
+    SettingsToggleRow(
+      title = stringResource(R.string.settings_background_audio),
+      subtitle = stringResource(R.string.settings_background_audio_desc),
+      checked = settings.backgroundAudioPlay,
+      onCheckedChange = viewModel::setBackgroundAudioPlay
     )
 
     HorizontalDivider(color = ObsidianBorder)
@@ -311,5 +350,26 @@ fun VlcSubtitleSettingsSection(
       checked = settings.subtitleBackgroundBox,
       onCheckedChange = viewModel::setSubtitleBackgroundBox
     )
+
+    HorizontalDivider(color = ObsidianBorder)
+
+    val delayPrefix = if (settings.subtitleDelayMs > 0) "+" else ""
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+      Text(
+        text = stringResource(R.string.player_sub_delay_title, "$delayPrefix${settings.subtitleDelayMs}"),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurface
+      )
+      Slider(
+        value = settings.subtitleDelayMs.toFloat(),
+        onValueChange = { viewModel.setSubtitleDelayMs((it / 100f).roundToInt() * 100) },
+        valueRange = -5000f..5000f,
+        colors = SliderDefaults.colors(
+          thumbColor = VlcOrange,
+          activeTrackColor = VlcOrange,
+          inactiveTrackColor = ObsidianSurfaceElevated
+        )
+      )
+    }
   }
 }

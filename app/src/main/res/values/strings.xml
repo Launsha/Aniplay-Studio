@@ -333,6 +333,103 @@
     <string name="player_equalizer_title">Equalizer &amp; Boost</string>
     <string name="player_battery_label">%1$d%%</string>
 
+    <!-- Pemindai & Skip Intro / Outro -->
+    <string name="player_skip_intro">Lewati Intro</string>
+    <string name="player_skip_outro">Lewati Outro</string>
+    <string name="player_skip_outro_next">Outro • Episode Berikutnya</string>
+    <string name="player_auto_skipped_intro">Intro dilewati otomatis</string>
+    <string name="player_auto_skipped_outro">Outro dilewati otomatis</string>
+    <string name="player_intro_outro_button">Intro &amp; Outro</string>
+    <string name="intro_outro_dialog_title">Pemindai Intro &amp; Outro</string>
+    <string name="intro_outro_scan_auto">Pindai Otomatis Sekarang</string>
+    <string name="intro_outro_scanning">Memindai chapter, subtitle &amp; pola audio…</string>
+    <string name="intro_outro_scan_found">Intro/Outro terdeteksi (%1$s)</string>
+    <string name="intro_outro_scan_none">Pola Intro/Outro tidak ditemukan otomatis. Tandai manual di posisi pemutaran saat ini.</string>
+    <string name="intro_outro_source_chapter">Sumber: Chapter MKV</string>
+    <string name="intro_outro_source_subtitle">Sumber: Marker Subtitle</string>
+    <string name="intro_outro_source_audio">Sumber: Pemindai Audio</string>
+    <string name="intro_outro_source_manual">Sumber: Manual Pengguna</string>
+    <string name="intro_outro_source_none">Belum terdeteksi</string>
+    <string name="intro_section_label">Segmen Intro (OP)</string>
+    <string name="outro_section_label">Segmen Outro (ED)</string>
+    <string name="intro_mark_start">Tandai Mulai Intro</string>
+    <string name="intro_mark_end">Tandai Akhir Intro</string>
+    <string name="outro_mark_start">Tandai Mulai Outro</string>
+    <string name="outro_mark_end">Tandai Akhir Outro</string>
+    <string name="intro_outro_range_value">%1$s – %2$s</string>
+    <string name="intro_outro_not_set">Belum diatur</string>
+    <string name="intro_outro_apply_all">Terapkan ke semua episode seri ini</string>
+    <string name="intro_outro_saved">Segmen Intro &amp; Outro disimpan</string>
+    <string name="intro_outro_reset">Hapus Penanda</string>
+    <string name="detail_scan_intro_outro">Pindai Intro &amp; Outro</string>
+    <string name="detail_scan_intro_outro_result">%1$d/%2$d episode memiliki data Intro/Outro</string>
+    <string name="detail_intro_badge">OP %1$s</string>
+    <string name="detail_outro_badge">ED %1$s</string>
+
+    <!-- Fitur Pemutar Tambahan Setara VLC Mobile -->
+    <string name="player_swipe_seek_forward">+%1$s • %2$s</string>
+    <string name="player_swipe_seek_backward">-%1$s • %2$s</string>
+    <string name="player_ab_repeat_title">Pengulangan A–B (A–B Repeat)</string>
+    <string name="player_ab_set_a">Tandai Titik A</string>
+    <string name="player_ab_set_b">Tandai Titik B</string>
+    <string name="player_ab_clear">Hentikan A–B</string>
+    <string name="player_ab_active_badge">Loop A–B: %1$s – %2$s</string>
+    <string name="player_ab_point_a_toast">Titik A ditandai di %1$s</string>
+    <string name="player_repeat_mode_title">Mode Pengulangan</string>
+    <string name="player_repeat_off">Mati</string>
+    <string name="player_repeat_one">Ulang 1 Ep</string>
+    <string name="player_repeat_all">Ulang Semua</string>
+    <string name="player_sub_delay_title">Sinkronisasi Subtitle: %1$s ms</string>
+    <string name="player_sub_delay_reset">Reset Delay</string>
+    <string name="player_night_dimmer_title">Peredup Layar Malam: %1$d%%</string>
+    <string name="player_background_audio_toggle">Putar Audio di Latar Belakang</string>
+    <string name="player_jump_to_time">Lompat ke Waktu</string>
+    <string name="player_jump_minutes">Menit</string>
+    <string name="player_jump_seconds">Detik</string>
+    <string name="player_jump_go">Lompat</string>
+    <string name="player_screenshot">Ambil Tangkapan Layar</string>
+    <string name="player_screenshot_saved">Tangkapan layar disimpan ke Gambar/AnimePlay</string>
+    <string name="player_screenshot_failed">Gagal mengambil tangkapan layar</string>
+    <string name="player_media_info">Info Media &amp; Codec</string>
+    <string name="player_media_resolution">Resolusi Video</string>
+    <string name="player_media_video_codec">Codec Video</string>
+    <string name="player_media_audio_codec">Codec &amp; Saluran Audio</string>
+    <string name="player_media_duration">Durasi Total</string>
+    <string name="player_media_filename">Nama File</string>
+    <string name="player_media_unknown">Tidak diketahui</string>
+    <string name="player_queue_title">Antrean Episode</string>
+    <string name="player_zoom_badge">Zoom %1$d%%</string>
+
+    <!-- Pengaturan Baru VLC & Intro/Outro -->
+    <string name="settings_auto_scan_intro">Pindai Intro &amp; Outro Otomatis</string>
+    <string name="settings_auto_scan_intro_desc">Deteksi chapter MKV dan marker OP/ED subtitle saat memindai folder.</string>
+    <string name="settings_auto_skip_intro">Lewati Intro (OP) Otomatis</string>
+    <string name="settings_auto_skip_intro_desc">Lompat otomatis melewati segmen pembuka jika terdeteksi.</string>
+    <string name="settings_auto_skip_outro">Lewati Outro (ED) Otomatis</string>
+    <string name="settings_auto_skip_outro_desc">Lompat otomatis melewati segmen penutup atau lanjut episode berikutnya.</string>
+    <string name="settings_horizontal_seek">Geser Horizontal untuk Seek</string>
+    <string name="settings_horizontal_seek_desc">Geser kiri/kanan pada layar video untuk maju/mundur cepat ala VLC.</string>
+    <string name="settings_pinch_zoom">Cubit untuk Zoom (Pinch to Zoom)</string>
+    <string name="settings_pinch_zoom_desc">Gunakan dua jari untuk memperbesar atau menyesuaikan ukuran video.</string>
+    <string name="settings_background_audio">Putar Audio di Latar Belakang</string>
+    <string name="settings_background_audio_desc">Lanjutkan memutar suara anime saat beralih aplikasi atau layar mati.</string>
+
+    <!-- Fitur Pendukung: Playlist Kustom, Streak & Bagikan -->
+    <string name="playlist_section_title">Daftar Putar (Playlist)</string>
+    <string name="playlist_all_anime">Semua</string>
+    <string name="playlist_create_button">Buat Playlist</string>
+    <string name="playlist_create_title">Buat Daftar Putar Baru</string>
+    <string name="playlist_name_hint">Contoh: Maraton Akhir Pekan</string>
+    <string name="playlist_empty">Belum ada daftar putar kustom.</string>
+    <string name="playlist_item_count">%1$d Anime</string>
+    <string name="detail_add_to_playlist">Playlist</string>
+    <string name="detail_playlist_dialog_title">Kelola Daftar Putar</string>
+    <string name="detail_share_anime">Bagikan</string>
+    <string name="detail_share_text">Saya sedang menonton %1$s (%2$d episode) di AnimePlay! Status: %3$s.</string>
+    <string name="home_streak_badge">🔥 Streak %1$d Hari</string>
+    <string name="stats_streak_label">Streak Menonton</string>
+    <string name="stats_streak_days">%1$d Hari</string>
+
     <!-- Deskripsi Konten Aksesibilitas -->
     <string name="cd_app_logo">Logo AnimePlay</string>
     <string name="cd_anime_thumbnail">Thumbnail %1$s</string>

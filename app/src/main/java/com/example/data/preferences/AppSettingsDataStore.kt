@@ -60,7 +60,18 @@ data class AppSettings(
   val showClockAndBatteryInPlayer: Boolean = true,
   val skipIntroDurationSeconds: Int = 85, // 75, 85, 90
   val bufferProfile: String = "balanced", // low_ram, balanced, high
-  val saveWatchHistory: Boolean = true
+  val saveWatchHistory: Boolean = true,
+
+  // Pemindai & Skip Intro/Outro + VLC Mobile Extras
+  val autoScanIntroOutro: Boolean = true,
+  val autoSkipIntro: Boolean = false,
+  val autoSkipOutro: Boolean = false,
+  val enableHorizontalSwipeSeek: Boolean = true,
+  val enablePinchZoom: Boolean = true,
+  val backgroundAudioPlay: Boolean = false,
+  val nightDimmerPercent: Int = 0, // 0..60
+  val defaultRepeatMode: String = "off", // off, one, all
+  val subtitleDelayMs: Int = 0 // -5000..5000
 )
 
 @Singleton
@@ -103,6 +114,16 @@ class AppSettingsDataStore @Inject constructor(
     val SKIP_INTRO_SECONDS = intPreferencesKey("skip_intro_seconds")
     val BUFFER_PROFILE = stringPreferencesKey("buffer_profile")
     val SAVE_WATCH_HISTORY = booleanPreferencesKey("save_watch_history")
+
+    val AUTO_SCAN_INTRO_OUTRO = booleanPreferencesKey("auto_scan_intro_outro")
+    val AUTO_SKIP_INTRO = booleanPreferencesKey("auto_skip_intro")
+    val AUTO_SKIP_OUTRO = booleanPreferencesKey("auto_skip_outro")
+    val HORIZONTAL_SWIPE_SEEK = booleanPreferencesKey("horizontal_swipe_seek")
+    val PINCH_ZOOM = booleanPreferencesKey("pinch_zoom")
+    val BACKGROUND_AUDIO_PLAY = booleanPreferencesKey("background_audio_play")
+    val NIGHT_DIMMER_PERCENT = intPreferencesKey("night_dimmer_percent")
+    val DEFAULT_REPEAT_MODE = stringPreferencesKey("default_repeat_mode")
+    val SUBTITLE_DELAY_MS = intPreferencesKey("subtitle_delay_ms")
   }
 
   val settingsFlow: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -135,7 +156,16 @@ class AppSettingsDataStore @Inject constructor(
       showClockAndBatteryInPlayer = prefs[Keys.SHOW_CLOCK_BATTERY] ?: true,
       skipIntroDurationSeconds = prefs[Keys.SKIP_INTRO_SECONDS] ?: 85,
       bufferProfile = prefs[Keys.BUFFER_PROFILE] ?: "balanced",
-      saveWatchHistory = prefs[Keys.SAVE_WATCH_HISTORY] ?: true
+      saveWatchHistory = prefs[Keys.SAVE_WATCH_HISTORY] ?: true,
+      autoScanIntroOutro = prefs[Keys.AUTO_SCAN_INTRO_OUTRO] ?: true,
+      autoSkipIntro = prefs[Keys.AUTO_SKIP_INTRO] ?: false,
+      autoSkipOutro = prefs[Keys.AUTO_SKIP_OUTRO] ?: false,
+      enableHorizontalSwipeSeek = prefs[Keys.HORIZONTAL_SWIPE_SEEK] ?: true,
+      enablePinchZoom = prefs[Keys.PINCH_ZOOM] ?: true,
+      backgroundAudioPlay = prefs[Keys.BACKGROUND_AUDIO_PLAY] ?: false,
+      nightDimmerPercent = prefs[Keys.NIGHT_DIMMER_PERCENT] ?: 0,
+      defaultRepeatMode = prefs[Keys.DEFAULT_REPEAT_MODE] ?: "off",
+      subtitleDelayMs = prefs[Keys.SUBTITLE_DELAY_MS] ?: 0
     )
   }
 
@@ -278,6 +308,42 @@ class AppSettingsDataStore @Inject constructor(
     context.dataStore.edit { prefs -> prefs[Keys.SAVE_WATCH_HISTORY] = enabled }
   }
 
+  suspend fun setAutoScanIntroOutro(enabled: Boolean) {
+    context.dataStore.edit { prefs -> prefs[Keys.AUTO_SCAN_INTRO_OUTRO] = enabled }
+  }
+
+  suspend fun setAutoSkipIntro(enabled: Boolean) {
+    context.dataStore.edit { prefs -> prefs[Keys.AUTO_SKIP_INTRO] = enabled }
+  }
+
+  suspend fun setAutoSkipOutro(enabled: Boolean) {
+    context.dataStore.edit { prefs -> prefs[Keys.AUTO_SKIP_OUTRO] = enabled }
+  }
+
+  suspend fun setEnableHorizontalSwipeSeek(enabled: Boolean) {
+    context.dataStore.edit { prefs -> prefs[Keys.HORIZONTAL_SWIPE_SEEK] = enabled }
+  }
+
+  suspend fun setEnablePinchZoom(enabled: Boolean) {
+    context.dataStore.edit { prefs -> prefs[Keys.PINCH_ZOOM] = enabled }
+  }
+
+  suspend fun setBackgroundAudioPlay(enabled: Boolean) {
+    context.dataStore.edit { prefs -> prefs[Keys.BACKGROUND_AUDIO_PLAY] = enabled }
+  }
+
+  suspend fun setNightDimmerPercent(percent: Int) {
+    context.dataStore.edit { prefs -> prefs[Keys.NIGHT_DIMMER_PERCENT] = percent.coerceIn(0, 60) }
+  }
+
+  suspend fun setDefaultRepeatMode(mode: String) {
+    context.dataStore.edit { prefs -> prefs[Keys.DEFAULT_REPEAT_MODE] = mode }
+  }
+
+  suspend fun setSubtitleDelayMs(delayMs: Int) {
+    context.dataStore.edit { prefs -> prefs[Keys.SUBTITLE_DELAY_MS] = delayMs.coerceIn(-5000, 5000) }
+  }
+
   suspend fun resetPlaybackDefaults() {
     context.dataStore.edit { prefs ->
       prefs[Keys.DEFAULT_SPEED] = 1.0f
@@ -304,6 +370,15 @@ class AppSettingsDataStore @Inject constructor(
       prefs[Keys.SKIP_INTRO_SECONDS] = 85
       prefs[Keys.BUFFER_PROFILE] = "balanced"
       prefs[Keys.SAVE_WATCH_HISTORY] = true
+      prefs[Keys.AUTO_SCAN_INTRO_OUTRO] = true
+      prefs[Keys.AUTO_SKIP_INTRO] = false
+      prefs[Keys.AUTO_SKIP_OUTRO] = false
+      prefs[Keys.HORIZONTAL_SWIPE_SEEK] = true
+      prefs[Keys.PINCH_ZOOM] = true
+      prefs[Keys.BACKGROUND_AUDIO_PLAY] = false
+      prefs[Keys.NIGHT_DIMMER_PERCENT] = 0
+      prefs[Keys.DEFAULT_REPEAT_MODE] = "off"
+      prefs[Keys.SUBTITLE_DELAY_MS] = 0
     }
   }
 }

@@ -80,6 +80,46 @@ interface EpisodeDao {
   @Query("UPDATE episodes SET subtitleUri = :subtitleUri WHERE id = :episodeId")
   suspend fun updateSubtitleUri(episodeId: Long, subtitleUri: String?)
 
+  @Query(
+    """
+    UPDATE episodes
+    SET introStartMs = :introStartMs,
+        introEndMs = :introEndMs,
+        outroStartMs = :outroStartMs,
+        outroEndMs = :outroEndMs,
+        introOutroSource = :source
+    WHERE id = :episodeId
+    """
+  )
+  suspend fun updateIntroOutro(
+    episodeId: Long,
+    introStartMs: Long,
+    introEndMs: Long,
+    outroStartMs: Long,
+    outroEndMs: Long,
+    source: String
+  )
+
+  @Query(
+    """
+    UPDATE episodes
+    SET introStartMs = :introStartMs,
+        introEndMs = :introEndMs,
+        outroStartMs = :outroStartMs,
+        outroEndMs = :outroEndMs,
+        introOutroSource = :source
+    WHERE animeId = :animeId
+    """
+  )
+  suspend fun updateIntroOutroForAnime(
+    animeId: Long,
+    introStartMs: Long,
+    introEndMs: Long,
+    outroStartMs: Long,
+    outroEndMs: Long,
+    source: String
+  )
+
   @Query("DELETE FROM episodes WHERE id IN (:ids)")
   suspend fun deleteByIds(ids: List<Long>)
 }

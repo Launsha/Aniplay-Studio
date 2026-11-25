@@ -7,10 +7,13 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.data.local.dao.AnimeDao
 import com.example.data.local.dao.BookmarkDao
 import com.example.data.local.dao.EpisodeDao
+import com.example.data.local.dao.PlaylistDao
 import com.example.data.local.dao.WatchActivityDao
 import com.example.data.local.entity.AnimeEntity
 import com.example.data.local.entity.EpisodeBookmarkEntity
 import com.example.data.local.entity.EpisodeEntity
+import com.example.data.local.entity.PlaylistAnimeCrossRef
+import com.example.data.local.entity.PlaylistEntity
 import com.example.data.local.entity.WatchActivityEntity
 
 @Database(
@@ -18,9 +21,11 @@ import com.example.data.local.entity.WatchActivityEntity
     AnimeEntity::class,
     EpisodeEntity::class,
     WatchActivityEntity::class,
-    EpisodeBookmarkEntity::class
+    EpisodeBookmarkEntity::class,
+    PlaylistEntity::class,
+    PlaylistAnimeCrossRef::class
   ],
-  version = 3,
+  version = 4,
   exportSchema = false
 )
 abstract class AnimeDatabase : RoomDatabase() {
@@ -28,6 +33,7 @@ abstract class AnimeDatabase : RoomDatabase() {
   abstract fun episodeDao(): EpisodeDao
   abstract fun watchActivityDao(): WatchActivityDao
   abstract fun bookmarkDao(): BookmarkDao
+  abstract fun playlistDao(): PlaylistDao
 
   companion object {
     val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -70,6 +76,39 @@ abstract class AnimeDatabase : RoomDatabase() {
           """.trimIndent()
         )
         db.execSQL("CREATE INDEX IF NOT EXISTS index_episode_bookmarks_episodeId ON episode_bookmarks(episodeId)")
+      }
+    }
+
+    val MIGRATION_3_4 = object : Migration(3, 4) {
+      override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE episodes ADD COLUMN introStartMs INTEGER NOT NULL DEFAULT -1")
+        db.execSQL("ALTER TABLE episodes ADD COLUMN introEndMs INTEGER NOT NULL DEFAULT -1")
+        db.execSQL("ALTER TABLE episodes ADD COLUMN outroStartMs INTEGER NOT NULL DEFAULT -1")
+        db.execSQL("ALTER TABLE episodes ADD COLUMN outroEndMs INTEGER NOT NULL DEFAULT -1")
+        db.execSQL("ALTER TABLE episodes ADD COLUMN introOutroSource TEXT NOT NULL DEFAULT ''")
+        db.execSQL(
+          """
+          CREATE TABLE IF NOT EXISTS playlists (
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            name TEXT NOT NULL,
+            createdAt INTEGER NOT NULL
+          )
+          """.trimIndent()
+        )
+        db.execSQL(
+          """
+          CREATE TABLE IF NOT EXISTS playlist_anime (
+            playlistId INTEGER NOT NULL,
+            animeId INTEGER NOT NULL,
+            addedAt INTEGER NOT NULL,
+            PRIMARY KEY(playlistId, animeId),
+            FOREIGN KEY(playlistId) REFERENCES playlists(id) ON DELETE CASCADE,
+            FOREIGN KEY(animeId) REFERENCES anime(id) ON DELETE CASCADE
+          )
+          """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_playlist_anime_playlistId ON playlist_anime(playlistId)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_playlist_anime_animeId ON playlist_anime(animeId)")
       }
     }
   }

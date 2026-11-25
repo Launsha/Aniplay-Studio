@@ -3,16 +3,22 @@ package com.example.data.repository
 import com.example.data.local.dao.AnimeDao
 import com.example.data.local.dao.BookmarkDao
 import com.example.data.local.dao.EpisodeDao
+import com.example.data.local.dao.PlaylistDao
 import com.example.data.local.dao.WatchActivityDao
 import com.example.data.local.entity.AnimeEntity
 import com.example.data.local.entity.AnimeWithStats
 import com.example.data.local.entity.EpisodeBookmarkEntity
 import com.example.data.local.entity.EpisodeEntity
 import com.example.data.local.entity.EpisodeWithAnime
+import com.example.data.local.entity.PlaylistAnimeCrossRef
+import com.example.data.local.entity.PlaylistEntity
+import com.example.data.local.entity.PlaylistSummary
 import com.example.data.local.entity.WatchActivityEntity
 import com.example.data.preferences.AppSettingsDataStore
 import com.example.data.remote.JikanApiService
 import com.example.data.remote.MalAnimeCandidate
+import com.example.data.scanner.IntroOutroDetector
+import com.example.data.scanner.IntroOutroSegment
 import com.example.data.scanner.MediaStoreScanner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -37,7 +43,9 @@ class AnimeRepository @Inject constructor(
   private val episodeDao: EpisodeDao,
   private val watchActivityDao: WatchActivityDao,
   private val bookmarkDao: BookmarkDao,
+  private val playlistDao: PlaylistDao,
   private val scanner: MediaStoreScanner,
+  private val introOutroDetector: IntroOutroDetector,
   private val settingsDataStore: AppSettingsDataStore,
   private val jikanApiService: JikanApiService
 ) {
@@ -57,6 +65,14 @@ class AnimeRepository @Inject constructor(
 
   fun observeBookmarksForEpisode(episodeId: Long): Flow<List<EpisodeBookmarkEntity>> =
     bookmarkDao.observeBookmarksForEpisode(episodeId)
+
+  fun observePlaylists(): Flow<List<PlaylistSummary>> = playlistDao.observePlaylists()
+
+  fun observePlaylistIdsForAnime(animeId: Long): Flow<List<Long>> =
+    playlistDao.observePlaylistIdsForAnime(animeId)
+
+  fun observeAllPlaylistMemberships(): Flow<List<PlaylistAnimeCrossRef>> =
+    playlistDao.observeAllPlaylistMemberships()
 
   fun observeTotalWatchedMs(): Flow<Long> = watchActivityDao.observeTotalWatchedMs()
 
@@ -193,6 +209,28 @@ class AnimeRepository @Inject constructor(
     }
     animeDao.deleteEmptyAnime()
 
+    // Fast MKV chapter + ASS/SRT OP/ED detection on unscanned episodes
+    if (settings.autoScanIntroOutro) {
+      val currentEpisodes = episodeDao.getAllSync()
+      for (ep in currentEpisodes) {
+        if (ep.introOutroSource.isBlank()) {
+          runCatching {
+            val detected = introOutroDetector.detectFastMetadataOnly(ep)
+            if (detected.hasAny) {
+              episodeDao.updateIntroOutro(
+                episodeId = ep.id,
+                introStartMs = detected.introStartMs,
+                introEndMs = detected.introEndMs,
+                outroStartMs = detected.outroStartMs,
+                outroEndMs = detected.outroEndMs,
+                source = detected.source
+              )
+            }
+          }
+        }
+      }
+    }
+
     // Best-effort auto-fill from MyAnimeList (Jikan v4) without failing offline scans
     for ((animeId, queryTitle) in animeIdsToEnrich.take(8)) {
       runCatching {
@@ -317,6 +355,118 @@ class AnimeRepository @Inject constructor(
 
   suspend fun deleteBookmark(bookmarkId: Long) = withContext(Dispatchers.IO) {
     bookmarkDao.deleteById(bookmarkId)
+  }
+
+  suspend fun scanIntroOutroForEpisode(episodeId: Long): IntroOutroSegment = withContext(Dispatchers.IO) {
+    val episode = episodeDao.getById(episodeId) ?: return@withContext IntroOutroSegment()
+    val siblings = episodeDao.observeEpisodesForAnime(episode.animeId).first()
+    val sibling = siblings.firstOrNull { it.id != episode.id }
+    val segment = introOutroDetector.detectFull(episode, sibling)
+    if (segment.hasAny) {
+      episodeDao.updateIntroOutro(
+        episodeId = episode.id,
+        introStartMs = segment.introStartMs,
+        introEndMs = segment.introEndMs,
+        outroStartMs = segment.outroStartMs,
+        outroEndMs = segment.outroEndMs,
+        source = segment.source
+      )
+    }
+    segment
+  }
+
+  suspend fun scanIntroOutroForAnime(animeId: Long): Pair<Int, Int> = withContext(Dispatchers.IO) {
+    val episodes = episodeDao.observeEpisodesForAnime(animeId).first()
+    if (episodes.isEmpty()) return@withContext 0 to 0
+    var detectedCount = 0
+    for (idx in episodes.indices) {
+      val ep = episodes[idx]
+      if (ep.introOutroSource == "manual") {
+        detectedCount++
+        continue
+      }
+      val sibling = episodes.getOrNull(if (idx == 0) 1 else 0)
+      val seg = runCatching { introOutroDetector.detectFull(ep, sibling) }.getOrNull()
+      if (seg != null && seg.hasAny) {
+        episodeDao.updateIntroOutro(
+          episodeId = ep.id,
+          introStartMs = seg.introStartMs,
+          introEndMs = seg.introEndMs,
+          outroStartMs = seg.outroStartMs,
+          outroEndMs = seg.outroEndMs,
+          source = seg.source
+        )
+        detectedCount++
+      }
+    }
+    detectedCount to episodes.size
+  }
+
+  suspend fun saveIntroOutro(
+    episodeId: Long,
+    animeId: Long,
+    introStartMs: Long,
+    introEndMs: Long,
+    outroStartMs: Long,
+    outroEndMs: Long,
+    source: String,
+    applyToAllEpisodes: Boolean
+  ) = withContext(Dispatchers.IO) {
+    if (applyToAllEpisodes) {
+      episodeDao.updateIntroOutroForAnime(
+        animeId = animeId,
+        introStartMs = introStartMs,
+        introEndMs = introEndMs,
+        outroStartMs = outroStartMs,
+        outroEndMs = outroEndMs,
+        source = source
+      )
+    } else {
+      episodeDao.updateIntroOutro(
+        episodeId = episodeId,
+        introStartMs = introStartMs,
+        introEndMs = introEndMs,
+        outroStartMs = outroStartMs,
+        outroEndMs = outroEndMs,
+        source = source
+      )
+    }
+  }
+
+  suspend fun createPlaylist(name: String): Long = withContext(Dispatchers.IO) {
+    val clean = name.trim()
+    if (clean.isBlank()) return@withContext -1L
+    playlistDao.insertPlaylist(PlaylistEntity(name = clean))
+  }
+
+  suspend fun deletePlaylist(playlistId: Long) = withContext(Dispatchers.IO) {
+    playlistDao.deletePlaylist(playlistId)
+  }
+
+  suspend fun toggleAnimeInPlaylist(playlistId: Long, animeId: Long, add: Boolean) = withContext(Dispatchers.IO) {
+    if (add) {
+      playlistDao.addAnimeToPlaylist(PlaylistAnimeCrossRef(playlistId = playlistId, animeId = animeId))
+    } else {
+      playlistDao.removeAnimeFromPlaylist(playlistId = playlistId, animeId = animeId)
+    }
+  }
+
+  fun computeWatchStreakDays(activities: List<WatchActivityEntity>): Int {
+    val activeDates = activities.filter { it.watchedMs > 0L }.map { it.dateKey }.toSet()
+    if (activeDates.isEmpty()) return 0
+    val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+    val cal = Calendar.getInstance()
+    val todayKey = sdf.format(Date(cal.timeInMillis))
+    if (!activeDates.contains(todayKey)) {
+      // Allow active streak up to yesterday if user hasn't watched yet today
+      cal.add(Calendar.DAY_OF_YEAR, -1)
+    }
+    var streak = 0
+    while (activeDates.contains(sdf.format(Date(cal.timeInMillis)))) {
+      streak++
+      cal.add(Calendar.DAY_OF_YEAR, -1)
+    }
+    return streak
   }
 
   suspend fun updateAnimeDetails(

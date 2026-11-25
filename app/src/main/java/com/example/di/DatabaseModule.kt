@@ -7,6 +7,7 @@ import com.example.data.local.AnimeDatabase
 import com.example.data.local.dao.AnimeDao
 import com.example.data.local.dao.BookmarkDao
 import com.example.data.local.dao.EpisodeDao
+import com.example.data.local.dao.PlaylistDao
 import com.example.data.local.dao.WatchActivityDao
 import dagger.Module
 import dagger.Provides
@@ -27,7 +28,11 @@ object DatabaseModule {
       AnimeDatabase::class.java,
       "animeplay.db"
     )
-      .addMigrations(AnimeDatabase.MIGRATION_1_2, AnimeDatabase.MIGRATION_2_3)
+      .addMigrations(
+        AnimeDatabase.MIGRATION_1_2,
+        AnimeDatabase.MIGRATION_2_3,
+        AnimeDatabase.MIGRATION_3_4
+      )
       .build()
   }
 
@@ -42,6 +47,9 @@ object DatabaseModule {
 
   @Provides
   fun provideBookmarkDao(database: AnimeDatabase): BookmarkDao = database.bookmarkDao()
+
+  @Provides
+  fun providePlaylistDao(database: AnimeDatabase): PlaylistDao = database.playlistDao()
 
   @Provides
   fun provideContentResolver(@ApplicationContext context: Context): ContentResolver =

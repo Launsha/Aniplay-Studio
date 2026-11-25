@@ -93,6 +93,7 @@ fun BerandaTab(
     item {
       WelcomeGreetingCard(
         configuredFoldersLabel = state.configuredFoldersLabel,
+        watchStreakDays = state.watchStreakDays,
         onOpenGuide = onOpenGuide,
         onOpenSettings = onOpenSettingsTab
       )
@@ -211,6 +212,7 @@ fun BerandaTab(
 @Composable
 private fun WelcomeGreetingCard(
   configuredFoldersLabel: String,
+  watchStreakDays: Int,
   onOpenGuide: () -> Unit,
   onOpenSettings: () -> Unit
 ) {
@@ -289,31 +291,52 @@ private fun WelcomeGreetingCard(
           style = MaterialTheme.typography.bodySmall,
           color = MaterialTheme.colorScheme.onSurface
         )
-        Surface(
-          color = ObsidianSurfaceElevated.copy(alpha = 0.9f),
-          shape = RoundedCornerShape(10.dp),
-          modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
-            .clickable(onClick = onOpenSettings)
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(8.dp),
+          verticalAlignment = Alignment.CenterVertically
         ) {
-          Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+          Surface(
+            color = ObsidianSurfaceElevated.copy(alpha = 0.9f),
+            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier
+              .weight(1f, fill = false)
+              .clip(RoundedCornerShape(10.dp))
+              .clickable(onClick = onOpenSettings)
           ) {
-            Icon(
-              imageVector = Icons.Rounded.FolderOpen,
-              contentDescription = null,
-              tint = VlcOrange,
-              modifier = Modifier.size(15.dp)
-            )
-            Text(
-              text = stringResource(R.string.home_configured_folders_chip, configuredFoldersLabel),
-              style = MaterialTheme.typography.labelSmall,
-              color = SecondaryGray,
-              maxLines = 1,
-              overflow = TextOverflow.Ellipsis
-            )
+            Row(
+              modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+              Icon(
+                imageVector = Icons.Rounded.FolderOpen,
+                contentDescription = null,
+                tint = VlcOrange,
+                modifier = Modifier.size(15.dp)
+              )
+              Text(
+                text = stringResource(R.string.home_configured_folders_chip, configuredFoldersLabel),
+                style = MaterialTheme.typography.labelSmall,
+                color = SecondaryGray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+              )
+            }
+          }
+          if (watchStreakDays > 0) {
+            Surface(
+              color = VlcOrangeSoft,
+              shape = RoundedCornerShape(10.dp),
+              modifier = Modifier.border(1.dp, VlcOrange.copy(alpha = 0.45f), RoundedCornerShape(10.dp))
+            ) {
+              Text(
+                text = stringResource(R.string.home_streak_badge, watchStreakDays),
+                style = MaterialTheme.typography.labelSmall,
+                color = VlcOrange,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+              )
+            }
           }
         }
       }

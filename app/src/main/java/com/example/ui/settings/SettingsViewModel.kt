@@ -217,6 +217,42 @@ class SettingsViewModel @Inject constructor(
     viewModelScope.launch { settingsDataStore.setSaveWatchHistory(enabled) }
   }
 
+  fun setAutoScanIntroOutro(enabled: Boolean) {
+    viewModelScope.launch { settingsDataStore.setAutoScanIntroOutro(enabled) }
+  }
+
+  fun setAutoSkipIntro(enabled: Boolean) {
+    viewModelScope.launch { settingsDataStore.setAutoSkipIntro(enabled) }
+  }
+
+  fun setAutoSkipOutro(enabled: Boolean) {
+    viewModelScope.launch { settingsDataStore.setAutoSkipOutro(enabled) }
+  }
+
+  fun setEnableHorizontalSwipeSeek(enabled: Boolean) {
+    viewModelScope.launch { settingsDataStore.setEnableHorizontalSwipeSeek(enabled) }
+  }
+
+  fun setEnablePinchZoom(enabled: Boolean) {
+    viewModelScope.launch { settingsDataStore.setEnablePinchZoom(enabled) }
+  }
+
+  fun setBackgroundAudioPlay(enabled: Boolean) {
+    viewModelScope.launch { settingsDataStore.setBackgroundAudioPlay(enabled) }
+  }
+
+  fun setNightDimmerPercent(percent: Int) {
+    viewModelScope.launch { settingsDataStore.setNightDimmerPercent(percent) }
+  }
+
+  fun setDefaultRepeatMode(mode: String) {
+    viewModelScope.launch { settingsDataStore.setDefaultRepeatMode(mode) }
+  }
+
+  fun setSubtitleDelayMs(delayMs: Int) {
+    viewModelScope.launch { settingsDataStore.setSubtitleDelayMs(delayMs) }
+  }
+
   fun resetPlaybackDefaults(doneMessage: String) {
     viewModelScope.launch {
       settingsDataStore.resetPlaybackDefaults()

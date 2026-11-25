@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Icon
@@ -87,6 +88,51 @@ fun StatistikTab(
         watchedEpisodes = state.totalWatchedEpisodes,
         animeCount = state.totalLibraryCount
       )
+    }
+
+    item {
+      Surface(
+        color = ObsidianSurface,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+          .fillMaxWidth()
+          .border(1.dp, VlcOrange.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+          .testTag("stats_streak_card")
+      ) {
+        Row(
+          modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+          ) {
+            Icon(
+              imageVector = Icons.Rounded.LocalFireDepartment,
+              contentDescription = null,
+              tint = VlcOrange,
+              modifier = Modifier.size(24.dp)
+            )
+            Text(
+              text = stringResource(R.string.stats_streak_label),
+              style = MaterialTheme.typography.titleMedium,
+              color = MaterialTheme.colorScheme.onSurface
+            )
+          }
+          Surface(
+            color = VlcOrangeSoft,
+            shape = RoundedCornerShape(10.dp)
+          ) {
+            Text(
+              text = stringResource(R.string.stats_streak_days, state.watchStreakDays),
+              style = MaterialTheme.typography.titleSmall,
+              color = VlcOrange,
+              modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+            )
+          }
+        }
+      }
     }
 
     item {

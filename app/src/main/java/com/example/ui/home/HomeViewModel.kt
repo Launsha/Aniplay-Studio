@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.R
 import com.example.data.local.entity.AnimeWithStats
 import com.example.data.local.entity.EpisodeWithAnime
+import com.example.data.local.entity.PlaylistAnimeCrossRef
+import com.example.data.local.entity.PlaylistSummary
 import com.example.data.local.entity.WatchActivityEntity
 import com.example.data.preferences.AppSettings
 import com.example.data.preferences.AppSettingsDataStore
@@ -48,6 +50,8 @@ data class HomeUiState(
   val selectedGenre: String? = null,
   val selectedYear: Int? = null,
   val selectedMalStatus: String? = null,
+  val selectedPlaylistId: Long? = null,
+  val playlists: List<PlaylistSummary> = emptyList(),
   val favoritesOnly: Boolean = false,
   val sortOption: LibrarySortOption = LibrarySortOption.RECENT,
   val isListViewMode: Boolean = false,
@@ -62,6 +66,7 @@ data class HomeUiState(
   val totalWatchedEpisodes: Int = 0,
   val completedAnimeCount: Int = 0,
   val totalWatchedMs: Long = 0L,
+  val watchStreakDays: Int = 0,
   val weeklyStats: List<DayWatchStat> = (1..7).map { DayWatchStat(it, 0f) },
   val malStatusBreakdown: Map<String, Int> = emptyMap(),
   val achievements: List<MilestoneInfo> = emptyList(),
@@ -76,6 +81,7 @@ private data class FilterCriteria(
   val genre: String? = null,
   val year: Int? = null,
   val malStatus: String? = null,
+  val selectedPlaylistId: Long? = null,
   val favoritesOnly: Boolean = false,
   val sortOption: LibrarySortOption = LibrarySortOption.RECENT,
   val isListViewMode: Boolean = false
@@ -98,6 +104,8 @@ class HomeViewModel @Inject constructor(
     repository.observeRecentHistory(),
     repository.observeTotalWatchedMs(),
     repository.observeWeeklyWatchActivity(),
+    repository.observePlaylists(),
+    repository.observeAllPlaylistMemberships(),
     settingsDataStore.settingsFlow,
     filterCriteria,
     isScanning,
@@ -113,11 +121,15 @@ class HomeViewModel @Inject constructor(
     val totalWatchedMs = values[3] as Long
     @Suppress("UNCHECKED_CAST")
     val activityList = values[4] as List<WatchActivityEntity>
-    val settings = values[5] as AppSettings
-    val filter = values[6] as FilterCriteria
-    val scanning = values[7] as Boolean
-    val scanned = values[8] as Boolean
-    val error = values[9] as String?
+    @Suppress("UNCHECKED_CAST")
+    val playlists = values[5] as List<PlaylistSummary>
+    @Suppress("UNCHECKED_CAST")
+    val playlistMemberships = values[6] as List<PlaylistAnimeCrossRef>
+    val settings = values[7] as AppSettings
+    val filter = values[8] as FilterCriteria
+    val scanning = values[9] as Boolean
+    val scanned = values[10] as Boolean
+    val error = values[11] as String?
 
     val genres = library
       .flatMap { it.anime.genre.split(",") }
@@ -130,6 +142,13 @@ class HomeViewModel @Inject constructor(
       .mapNotNull { it.anime.releaseYear }
       .distinct()
       .sortedDescending()
+
+    val selectedPlaylistAnimeIds = filter.selectedPlaylistId?.let { targetPlaylistId ->
+      playlistMemberships
+        .filter { it.playlistId == targetPlaylistId }
+        .map { it.animeId }
+        .toSet()
+    }
 
     val trimmedQuery = filter.query.trim()
     val filteredAnime = library
@@ -149,9 +168,12 @@ class HomeViewModel @Inject constructor(
         val matchesStatus = filter.malStatus == null ||
           item.anime.malStatus == filter.malStatus
 
+        val matchesPlaylist = selectedPlaylistAnimeIds == null ||
+          item.anime.id in selectedPlaylistAnimeIds
+
         val matchesFav = !filter.favoritesOnly || item.anime.isFavorite
 
-        matchesQuery && matchesGenre && matchesYear && matchesStatus && matchesFav
+        matchesQuery && matchesGenre && matchesYear && matchesStatus && matchesPlaylist && matchesFav
       }
       .let { list ->
         when (filter.sortOption) {
@@ -218,6 +240,8 @@ class HomeViewModel @Inject constructor(
       MediaStoreScanner.extractDisplayFolderLabel(it)
     }).distinct().joinToString(", ").ifBlank { "-" }
 
+    val watchStreakDays = repository.computeWatchStreakDays(activityList)
+
     HomeUiState(
       settingsLoaded = true,
       hasCompletedOnboarding = settings.hasCompletedOnboarding,
@@ -228,6 +252,8 @@ class HomeViewModel @Inject constructor(
       selectedGenre = filter.genre,
       selectedYear = filter.year,
       selectedMalStatus = filter.malStatus,
+      selectedPlaylistId = filter.selectedPlaylistId,
+      playlists = playlists,
       favoritesOnly = filter.favoritesOnly,
       sortOption = filter.sortOption,
       isListViewMode = filter.isListViewMode,
@@ -242,6 +268,7 @@ class HomeViewModel @Inject constructor(
       totalWatchedEpisodes = totalWatchedEpisodes,
       completedAnimeCount = completedAnimeCount,
       totalWatchedMs = totalWatchedMs,
+      watchStreakDays = watchStreakDays,
       weeklyStats = weeklyStats,
       malStatusBreakdown = malBreakdown,
       achievements = achievements,
@@ -365,7 +392,33 @@ class HomeViewModel @Inject constructor(
       genre = null,
       year = null,
       malStatus = null,
+      selectedPlaylistId = null,
       favoritesOnly = false
     )
+  }
+
+  fun onSelectPlaylist(playlistId: Long?) {
+    val current = filterCriteria.value
+    filterCriteria.value = current.copy(
+      selectedPlaylistId = if (current.selectedPlaylistId == playlistId) null else playlistId
+    )
+  }
+
+  fun createPlaylist(name: String) {
+    viewModelScope.launch {
+      val id = repository.createPlaylist(name)
+      if (id > 0L) {
+        filterCriteria.value = filterCriteria.value.copy(selectedPlaylistId = id)
+      }
+    }
+  }
+
+  fun deletePlaylist(playlistId: Long) {
+    viewModelScope.launch {
+      repository.deletePlaylist(playlistId)
+      if (filterCriteria.value.selectedPlaylistId == playlistId) {
+        filterCriteria.value = filterCriteria.value.copy(selectedPlaylistId = null)
+      }
+    }
   }
 }

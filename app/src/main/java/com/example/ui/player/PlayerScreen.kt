@@ -24,6 +24,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -48,9 +51,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Audiotrack
+import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.BrightnessHigh
@@ -92,6 +97,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -99,6 +105,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -142,6 +149,7 @@ import com.example.util.TimeFormatters
 import com.example.util.scaleOnPress
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -179,6 +187,7 @@ fun PlayerScreen(
     context.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
   }
 
+  val coroutineScope = rememberCoroutineScope()
   var controlsVisible by remember { mutableStateOf(true) }
   var isScreenLocked by remember { mutableStateOf(false) }
   var interactionNonce by remember { mutableIntStateOf(0) }
@@ -192,10 +201,23 @@ fun PlayerScreen(
   var showSpeedMenu by remember { mutableStateOf(false) }
   var showTrackDialog by remember { mutableStateOf(false) }
   var showToolsDialog by remember { mutableStateOf(false) }
+  var showIntroOutroDialog by remember { mutableStateOf(false) }
+  var showJumpToTimeDialog by remember { mutableStateOf(false) }
+  var showMediaInfoDialog by remember { mutableStateOf(false) }
+  var showQueueDialog by remember { mutableStateOf(false) }
   var doubleTapFeedback by remember { mutableStateOf<Pair<Boolean, Int>?>(null) }
   var gestureIndicator by remember { mutableStateOf<GestureIndicatorState?>(null) }
   var feedbackToastText by remember { mutableStateOf<String?>(null) }
   var accumulatedWatchMs by remember { mutableLongStateOf(0L) }
+
+  // VLC Extra features: Pinch zoom, Horizontal swipe seek, A-B Repeat, Auto-Skip OP/ED
+  var pinchZoomScale by remember { mutableFloatStateOf(1f) }
+  var horizontalSwipeDeltaMs by remember { mutableStateOf<Long?>(null) }
+  var horizontalSwipeTargetMs by remember { mutableLongStateOf(0L) }
+  var abPointAMs by remember { mutableStateOf<Long?>(null) }
+  var abPointBMs by remember { mutableStateOf<Long?>(null) }
+  var autoSkippedIntroForEpId by remember { mutableLongStateOf(-1L) }
+  var autoSkippedOutroForEpId by remember { mutableLongStateOf(-1L) }
 
   var currentClockText by remember { mutableStateOf("") }
   var batteryPercent by remember { mutableIntStateOf(100) }
@@ -347,10 +369,30 @@ fun PlayerScreen(
           }
 
           val next = latestState.nextEpisode
-          if (latestState.autoPlayNextEpisode && next != null) {
-            viewModel.loadEpisode(next.id)
-          } else {
-            controlsVisible = true
+          when (latestState.repeatMode) {
+            "one" -> {
+              exoPlayer.seekTo(0L)
+              exoPlayer.playWhenReady = true
+            }
+            "all" -> {
+              if (next != null) {
+                viewModel.loadEpisode(next.id)
+              } else {
+                val firstEp = latestState.allAnimeEpisodes.firstOrNull()
+                if (firstEp != null) {
+                  viewModel.loadEpisode(firstEp.id, explicitStartPosMs = 0L)
+                } else {
+                  controlsVisible = true
+                }
+              }
+            }
+            else -> {
+              if (latestState.autoPlayNextEpisode && next != null) {
+                viewModel.loadEpisode(next.id)
+              } else {
+                controlsVisible = true
+              }
+            }
           }
         }
       }
@@ -379,7 +421,7 @@ fun PlayerScreen(
     val observer = LifecycleEventObserver { _, event ->
       if (event == Lifecycle.Event.ON_PAUSE) {
         val inPip = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && activity?.isInPictureInPictureMode == true
-        if (!inPip) {
+        if (!inPip && !latestState.backgroundAudioPlay) {
           exoPlayer.pause()
         }
         val delta = accumulatedWatchMs
@@ -398,15 +440,22 @@ fun PlayerScreen(
   }
 
   val episode = state.currentEpisode
-  LaunchedEffect(episode?.id, state.subtitleUri, state.subtitleMimeType) {
+  LaunchedEffect(episode?.id) {
+    abPointAMs = null
+    abPointBMs = null
+    autoSkippedIntroForEpId = -1L
+    autoSkippedOutroForEpId = -1L
+  }
+
+  LaunchedEffect(episode?.id, state.effectiveSubtitleUri, state.subtitleMimeType) {
     if (episode != null) {
       playbackError = false
       isBuffering = true
 
       val resumePosition = when {
-        state.requestedStartPositionMs >= 0L -> state.requestedStartPositionMs
         exoPlayer.currentMediaItem?.mediaId == episode.id.toString() ->
           exoPlayer.currentPosition.coerceAtLeast(0L)
+        state.requestedStartPositionMs >= 0L -> state.requestedStartPositionMs
         else -> {
           val saved = episode.lastPositionMs
           val dur = episode.durationMs
@@ -423,7 +472,7 @@ fun PlayerScreen(
         .setMediaId(episode.id.toString())
         .setUri(Uri.parse(episode.fileUri))
 
-      val subUri = state.subtitleUri
+      val subUri = state.effectiveSubtitleUri
       if (!subUri.isNullOrBlank()) {
         val subConfig = MediaItem.SubtitleConfiguration.Builder(Uri.parse(subUri))
           .setMimeType(state.subtitleMimeType)
@@ -442,6 +491,7 @@ fun PlayerScreen(
       exoPlayer.setMediaItem(mediaItemBuilder.build(), resumePosition)
       exoPlayer.playbackParameters = PlaybackParameters(state.playbackSpeed)
       exoPlayer.skipSilenceEnabled = state.skipSilence
+      exoPlayer.repeatMode = if (state.repeatMode == "one") Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
       exoPlayer.trackSelectionParameters = paramBuilder.build()
       exoPlayer.prepare()
       exoPlayer.playWhenReady = true
@@ -466,7 +516,14 @@ fun PlayerScreen(
     exoPlayer.skipSilenceEnabled = state.skipSilence
   }
 
-  // Seekbar polling, clock/battery, sleep timer countdown, and 5s progress save
+  LaunchedEffect(state.repeatMode) {
+    exoPlayer.repeatMode = if (state.repeatMode == "one") Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+  }
+
+  val autoSkippedIntroMsg = stringResource(R.string.player_auto_skipped_intro)
+  val autoSkippedOutroMsg = stringResource(R.string.player_auto_skipped_outro)
+
+  // Seekbar polling, A-B Repeat, Auto-Skip Intro/Outro, clock/battery, sleep timer countdown, and 5s progress save
   LaunchedEffect(exoPlayer, episode?.id) {
     var elapsedSaveMs = 0L
     var secondTickMs = 0L
@@ -478,6 +535,45 @@ fun PlayerScreen(
         val dur = exoPlayer.duration.coerceAtLeast(0L)
         currentPositionMs = pos
         if (dur > 0L) totalDurationMs = dur
+
+        // A-B Repeat check
+        val pointA = abPointAMs
+        val pointB = abPointBMs
+        if (pointA != null && pointB != null && pointB > pointA && pos >= pointB && exoPlayer.isPlaying) {
+          exoPlayer.seekTo(pointA)
+          currentPositionMs = pointA
+        }
+
+        // Auto-Skip Intro & Outro check
+        val curEp = latestState.currentEpisode
+        if (curEp != null && exoPlayer.isPlaying) {
+          if (latestState.autoSkipIntro &&
+            autoSkippedIntroForEpId != curEp.id &&
+            curEp.introStartMs >= 0L &&
+            curEp.introEndMs > curEp.introStartMs + 5_000L &&
+            pos in curEp.introStartMs until (curEp.introEndMs - 2_000L)
+          ) {
+            autoSkippedIntroForEpId = curEp.id
+            exoPlayer.seekTo(curEp.introEndMs)
+            currentPositionMs = curEp.introEndMs
+            feedbackToastText = autoSkippedIntroMsg
+          } else if (latestState.autoSkipOutro &&
+            autoSkippedOutroForEpId != curEp.id &&
+            curEp.outroStartMs >= 0L &&
+            curEp.outroEndMs > curEp.outroStartMs + 5_000L &&
+            pos in curEp.outroStartMs until (curEp.outroEndMs - 2_000L)
+          ) {
+            autoSkippedOutroForEpId = curEp.id
+            val nextEp = latestState.nextEpisode
+            if (nextEp != null && latestState.autoPlayNextEpisode) {
+              viewModel.loadEpisode(nextEp.id)
+            } else {
+              exoPlayer.seekTo(curEp.outroEndMs)
+              currentPositionMs = curEp.outroEndMs
+            }
+            feedbackToastText = autoSkippedOutroMsg
+          }
+        }
       }
       if (exoPlayer.isPlaying) {
         accumulatedWatchMs += 250L
@@ -514,9 +610,9 @@ fun PlayerScreen(
     }
   }
 
-  LaunchedEffect(controlsVisible, isPlaying, interactionNonce, showSpeedMenu, showTrackDialog, showToolsDialog, isScreenLocked) {
+  LaunchedEffect(controlsVisible, isPlaying, interactionNonce, showSpeedMenu, showTrackDialog, showToolsDialog, showIntroOutroDialog, showJumpToTimeDialog, showMediaInfoDialog, showQueueDialog, isScreenLocked) {
     val autoHideSec = state.controlsAutoHideSeconds
-    if (controlsVisible && isPlaying && !showSpeedMenu && !showTrackDialog && !showToolsDialog && !playbackError && autoHideSec > 0) {
+    if (controlsVisible && isPlaying && !showSpeedMenu && !showTrackDialog && !showToolsDialog && !showIntroOutroDialog && !showJumpToTimeDialog && !showMediaInfoDialog && !showQueueDialog && !playbackError && autoHideSec > 0) {
       delay(autoHideSec * 1000L)
       controlsVisible = false
     }
@@ -640,16 +736,45 @@ fun PlayerScreen(
           )
         }
       },
-      modifier = Modifier.fillMaxSize()
+      modifier = Modifier
+        .fillMaxSize()
+        .graphicsLayer(
+          scaleX = pinchZoomScale,
+          scaleY = pinchZoomScale
+        )
     )
+
+    NightDimmerLayer(dimmerPercent = state.nightDimmerPercent)
 
     var dragBrightness by remember { mutableFloatStateOf(0.5f) }
     var dragVolume by remember { mutableFloatStateOf(0.5f) }
     var activeGestureKind by remember { mutableStateOf<GestureKind?>(null) }
+    var horizontalStartPosMs by remember { mutableLongStateOf(0L) }
+    var horizontalAccumulatedPx by remember { mutableFloatStateOf(0f) }
 
     Box(
       modifier = Modifier
         .fillMaxSize()
+        .pointerInput(isScreenLocked, state.enablePinchZoom) {
+          if (!state.enablePinchZoom) return@pointerInput
+          awaitEachGesture {
+            var zoomed = false
+            do {
+              val event = awaitPointerEvent()
+              if (!isScreenLocked && event.changes.count { it.pressed } >= 2) {
+                val zoomChange = event.calculateZoom()
+                if (zoomChange != 1f) {
+                  pinchZoomScale = (pinchZoomScale * zoomChange).coerceIn(1f, 2.5f)
+                  zoomed = true
+                  event.changes.forEach { it.consume() }
+                }
+              }
+            } while (event.changes.any { it.pressed })
+            if (zoomed) {
+              feedbackToastText = context.getString(R.string.player_zoom_badge, (pinchZoomScale * 100f).roundToInt())
+            }
+          }
+        }
         .pointerInput(exoPlayer, isScreenLocked, state.enableDoubleTapSeek, state.seekJumpSeconds) {
           detectTapGestures(
             onTap = {
@@ -733,6 +858,94 @@ fun PlayerScreen(
             }
           )
         }
+        .pointerInput(exoPlayer, isScreenLocked, state.enableHorizontalSwipeSeek) {
+          detectHorizontalDragGestures(
+            onDragStart = {
+              if (isScreenLocked || !state.enableHorizontalSwipeSeek) return@detectHorizontalDragGestures
+              horizontalStartPosMs = exoPlayer.currentPosition.coerceAtLeast(0L)
+              horizontalAccumulatedPx = 0f
+              horizontalSwipeDeltaMs = 0L
+              horizontalSwipeTargetMs = horizontalStartPosMs
+            },
+            onDragEnd = {
+              if (horizontalSwipeDeltaMs != null && !isScreenLocked && state.enableHorizontalSwipeSeek) {
+                exoPlayer.seekTo(horizontalSwipeTargetMs)
+                currentPositionMs = horizontalSwipeTargetMs
+                interactionNonce++
+              }
+              horizontalSwipeDeltaMs = null
+            },
+            onDragCancel = {
+              horizontalSwipeDeltaMs = null
+            },
+            onHorizontalDrag = { _, dragAmount ->
+              if (isScreenLocked || !state.enableHorizontalSwipeSeek) return@detectHorizontalDragGestures
+              horizontalAccumulatedPx += dragAmount
+              // Full screen width horizontal drag = +/- 90 seconds
+              val deltaMs = ((horizontalAccumulatedPx / containerWidthPx) * 90_000f).toLong()
+              val maxDur = exoPlayer.duration.takeIf { it > 0L } ?: Long.MAX_VALUE
+              val target = (horizontalStartPosMs + deltaMs).coerceIn(0L, maxDur)
+              horizontalSwipeTargetMs = target
+              horizontalSwipeDeltaMs = target - horizontalStartPosMs
+            }
+          )
+        }
+    )
+
+    HorizontalSwipeSeekOverlay(
+      deltaMs = horizontalSwipeDeltaMs,
+      targetPositionMs = horizontalSwipeTargetMs
+    )
+
+    AbRepeatActiveBadge(
+      pointAMs = abPointAMs,
+      pointBMs = abPointBMs,
+      onClear = {
+        abPointAMs = null
+        abPointBMs = null
+      }
+    )
+
+    val inIntroWindow = episode != null &&
+      episode.introStartMs >= 0L &&
+      episode.introEndMs > episode.introStartMs + 5_000L &&
+      currentPositionMs in episode.introStartMs until (episode.introEndMs - 1_000L)
+
+    val inOutroWindow = episode != null &&
+      episode.outroStartMs >= 0L &&
+      episode.outroEndMs > episode.outroStartMs + 5_000L &&
+      currentPositionMs in episode.outroStartMs until (episode.outroEndMs - 1_000L)
+
+    FloatingSkipIntroOutroPills(
+      inIntro = inIntroWindow,
+      inOutro = inOutroWindow,
+      hasNextEpisode = state.nextEpisode != null,
+      controlsVisible = controlsVisible,
+      isScreenLocked = isScreenLocked,
+      onSkipIntro = {
+        val target = episode?.introEndMs ?: return@FloatingSkipIntroOutroPills
+        exoPlayer.seekTo(target)
+        currentPositionMs = target
+        interactionNonce++
+      },
+      onSkipOutro = {
+        val nextEp = state.nextEpisode
+        if (nextEp != null) {
+          val delta = accumulatedWatchMs
+          accumulatedWatchMs = 0L
+          viewModel.saveProgress(
+            exoPlayer.currentPosition,
+            exoPlayer.duration.coerceAtLeast(0L),
+            watchedDeltaMs = delta
+          )
+          viewModel.loadEpisode(nextEp.id)
+        } else {
+          val target = episode?.outroEndMs ?: return@FloatingSkipIntroOutroPills
+          exoPlayer.seekTo(target)
+          currentPositionMs = target
+        }
+        interactionNonce++
+      }
     )
 
     doubleTapFeedback?.let { (isForward, _) ->
@@ -1068,6 +1281,22 @@ fun PlayerScreen(
 
             IconButton(
               onClick = {
+                showQueueDialog = true
+                interactionNonce++
+              },
+              modifier = Modifier
+                .minimumInteractiveComponentSize()
+                .testTag("player_queue_button")
+            ) {
+              Icon(
+                imageVector = Icons.AutoMirrored.Rounded.PlaylistPlay,
+                contentDescription = stringResource(R.string.player_queue_title),
+                tint = MaterialTheme.colorScheme.onBackground
+              )
+            }
+
+            IconButton(
+              onClick = {
                 showTrackDialog = true
                 interactionNonce++
               },
@@ -1358,6 +1587,30 @@ fun PlayerScreen(
                   color = VlcOrange
                 )
               }
+
+              OutlinedButton(
+                onClick = {
+                  showIntroOutroDialog = true
+                  interactionNonce++
+                },
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier
+                  .height(38.dp)
+                  .testTag("player_intro_outro_button")
+              ) {
+                Icon(
+                  imageVector = Icons.Rounded.AutoFixHigh,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.onBackground,
+                  modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                  text = stringResource(R.string.player_intro_outro_button),
+                  style = MaterialTheme.typography.labelSmall,
+                  color = MaterialTheme.colorScheme.onBackground
+                )
+              }
             }
 
             val nextEp = state.nextEpisode
@@ -1448,11 +1701,22 @@ fun PlayerScreen(
 
   if (showToolsDialog) {
     val bookmarkSavedFmt = stringResource(R.string.player_bookmark_saved)
+    val abPointAToastFmt = stringResource(R.string.player_ab_point_a_toast)
+    val screenshotSavedMsg = stringResource(R.string.player_screenshot_saved)
+    val screenshotFailedMsg = stringResource(R.string.player_screenshot_failed)
     VlcToolsDialog(
       eqPreset = state.audioEqualizerPreset,
       audioBoostPercent = state.audioBoostPercent,
       sleepMinutesRemaining = sleepSecondsLeft?.let { ((it + 59) / 60).coerceAtLeast(1) },
       sleepOnEpisodeEnd = sleepOnEpisodeEnd,
+      repeatMode = state.repeatMode,
+      abPointAMs = abPointAMs,
+      abPointBMs = abPointBMs,
+      subtitleDelayMs = state.subtitleDelayMs,
+      nightDimmerPercent = state.nightDimmerPercent,
+      autoSkipIntro = state.autoSkipIntro,
+      autoSkipOutro = state.autoSkipOutro,
+      backgroundAudioPlay = state.backgroundAudioPlay,
       canUsePip = state.enablePictureInPicture && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O,
       onSelectEqPreset = viewModel::setEqualizerPreset,
       onChangeAudioBoost = viewModel::setAudioBoostPercent,
@@ -1463,6 +1727,38 @@ fun PlayerScreen(
       onSelectSleepEndOfEpisode = {
         sleepSecondsLeft = null
         sleepOnEpisodeEnd = true
+      },
+      onSelectRepeatMode = viewModel::setRepeatMode,
+      onSetAbPointA = {
+        val pos = exoPlayer.currentPosition.coerceAtLeast(0L)
+        abPointAMs = pos
+        if (abPointBMs != null && abPointBMs!! <= pos) abPointBMs = null
+        feedbackToastText = String.format(abPointAToastFmt, TimeFormatters.formatDuration(pos))
+      },
+      onSetAbPointB = {
+        val pos = exoPlayer.currentPosition.coerceAtLeast(0L)
+        val a = abPointAMs ?: (pos - 10_000L).coerceAtLeast(0L)
+        abPointAMs = a
+        abPointBMs = pos.coerceAtLeast(a + 2_000L)
+      },
+      onClearAbRepeat = {
+        abPointAMs = null
+        abPointBMs = null
+      },
+      onChangeSubtitleDelay = viewModel::setSubtitleDelayMs,
+      onChangeNightDimmer = viewModel::setNightDimmerPercent,
+      onToggleAutoSkipIntro = viewModel::setAutoSkipIntro,
+      onToggleAutoSkipOutro = viewModel::setAutoSkipOutro,
+      onToggleBackgroundAudio = viewModel::setBackgroundAudioPlay,
+      onOpenIntroOutroScanner = { showIntroOutroDialog = true },
+      onOpenJumpToTime = { showJumpToTimeDialog = true },
+      onOpenMediaInfo = { showMediaInfoDialog = true },
+      onCaptureScreenshot = {
+        val pos = exoPlayer.currentPosition.coerceAtLeast(0L)
+        coroutineScope.launch {
+          val ok = viewModel.captureFrameToPictures(pos)
+          feedbackToastText = if (ok) screenshotSavedMsg else screenshotFailedMsg
+        }
       },
       onAddBookmark = {
         val pos = exoPlayer.currentPosition.coerceAtLeast(0L)
@@ -1482,6 +1778,82 @@ fun PlayerScreen(
         }
       },
       onDismiss = { showToolsDialog = false }
+    )
+  }
+
+  if (showIntroOutroDialog) {
+    val foundFmt = stringResource(R.string.intro_outro_scan_found)
+    val noneMsg = stringResource(R.string.intro_outro_scan_none)
+    val savedMsg = stringResource(R.string.intro_outro_saved)
+    IntroOutroScannerDialog(
+      episode = episode,
+      currentPositionMs = currentPositionMs,
+      isScanning = state.isScanningIntroOutro,
+      scanMessage = state.introOutroScanMessage,
+      onRunAutoScan = { viewModel.scanCurrentEpisodeIntroOutro(foundFmt, noneMsg) },
+      onSaveSegments = { iS, iE, oS, oE, src, all ->
+        viewModel.saveIntroOutroSegments(iS, iE, oS, oE, src, all)
+        feedbackToastText = savedMsg
+      },
+      onDismiss = { showIntroOutroDialog = false }
+    )
+  }
+
+  if (showJumpToTimeDialog) {
+    JumpToTimeDialog(
+      currentPositionMs = currentPositionMs,
+      totalDurationMs = totalDurationMs,
+      onJump = { targetMs ->
+        exoPlayer.seekTo(targetMs)
+        currentPositionMs = targetMs
+      },
+      onDismiss = { showJumpToTimeDialog = false }
+    )
+  }
+
+  if (showMediaInfoDialog) {
+    val unknown = stringResource(R.string.player_media_unknown)
+    val videoFmt = currentTracks.groups
+      .firstOrNull { it.type == C.TRACK_TYPE_VIDEO && it.length > 0 }
+      ?.getTrackFormat(0)
+    val audioFmt = currentTracks.groups
+      .firstOrNull { it.type == C.TRACK_TYPE_AUDIO && it.isSelected && it.length > 0 }
+      ?.getTrackFormat(0)
+      ?: currentTracks.groups.firstOrNull { it.type == C.TRACK_TYPE_AUDIO && it.length > 0 }?.getTrackFormat(0)
+
+    MediaInfoDialog(
+      fileName = episode?.fileName ?: unknown,
+      resolution = if (videoFmt != null && videoFmt.width > 0 && videoFmt.height > 0) {
+        "${videoFmt.width} × ${videoFmt.height}"
+      } else {
+        unknown
+      },
+      videoCodec = videoFmt?.sampleMimeType ?: videoFmt?.codecs ?: unknown,
+      audioCodec = if (audioFmt != null) {
+        "${audioFmt.sampleMimeType ?: audioFmt.codecs ?: unknown} • ${audioFmt.channelCount}ch • ${audioFmt.sampleRate}Hz"
+      } else {
+        unknown
+      },
+      durationMs = totalDurationMs,
+      onDismiss = { showMediaInfoDialog = false }
+    )
+  }
+
+  if (showQueueDialog) {
+    PlayerEpisodeQueueDialog(
+      episodes = state.allAnimeEpisodes,
+      currentEpisodeId = episode?.id ?: -1L,
+      onSelectEpisode = { chosen ->
+        val delta = accumulatedWatchMs
+        accumulatedWatchMs = 0L
+        viewModel.saveProgress(
+          exoPlayer.currentPosition,
+          exoPlayer.duration.coerceAtLeast(0L),
+          watchedDeltaMs = delta
+        )
+        viewModel.loadEpisode(chosen.id)
+      },
+      onDismiss = { showQueueDialog = false }
     )
   }
 }

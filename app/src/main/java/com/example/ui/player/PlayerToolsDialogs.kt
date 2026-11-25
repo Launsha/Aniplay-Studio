@@ -18,11 +18,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Audiotrack
+import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.BookmarkAdd
+import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Equalizer
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
+import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Subtitles
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
@@ -218,15 +223,43 @@ fun VlcToolsDialog(
   audioBoostPercent: Int,
   sleepMinutesRemaining: Int?,
   sleepOnEpisodeEnd: Boolean,
+  repeatMode: String,
+  abPointAMs: Long?,
+  abPointBMs: Long?,
+  subtitleDelayMs: Int,
+  nightDimmerPercent: Int,
+  autoSkipIntro: Boolean,
+  autoSkipOutro: Boolean,
+  backgroundAudioPlay: Boolean,
   canUsePip: Boolean,
   onSelectEqPreset: (String) -> Unit,
   onChangeAudioBoost: (Int) -> Unit,
   onSelectSleepMinutes: (Int?) -> Unit,
   onSelectSleepEndOfEpisode: () -> Unit,
+  onSelectRepeatMode: (String) -> Unit,
+  onSetAbPointA: () -> Unit,
+  onSetAbPointB: () -> Unit,
+  onClearAbRepeat: () -> Unit,
+  onChangeSubtitleDelay: (Int) -> Unit,
+  onChangeNightDimmer: (Int) -> Unit,
+  onToggleAutoSkipIntro: (Boolean) -> Unit,
+  onToggleAutoSkipOutro: (Boolean) -> Unit,
+  onToggleBackgroundAudio: (Boolean) -> Unit,
+  onOpenIntroOutroScanner: () -> Unit,
+  onOpenJumpToTime: () -> Unit,
+  onOpenMediaInfo: () -> Unit,
+  onCaptureScreenshot: () -> Unit,
   onAddBookmark: () -> Unit,
   onEnterPip: () -> Unit,
   onDismiss: () -> Unit
 ) {
+  val chipColors = FilterChipDefaults.filterChipColors(
+    selectedContainerColor = VlcOrange,
+    selectedLabelColor = OnPrimaryBlack,
+    containerColor = ObsidianSurfaceElevated,
+    labelColor = SecondaryGray
+  )
+
   AlertDialog(
     onDismissRequest = onDismiss,
     containerColor = ObsidianSurface,
@@ -240,10 +273,101 @@ fun VlcToolsDialog(
       Column(
         modifier = Modifier
           .fillMaxWidth()
-          .heightIn(max = 420.dp)
+          .heightIn(max = 450.dp)
           .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
       ) {
+        // Intro & Outro Scanner + Auto-skip
+        OutlinedButton(
+          onClick = {
+            onDismiss()
+            onOpenIntroOutroScanner()
+          },
+          modifier = Modifier.fillMaxWidth()
+        ) {
+          Icon(
+            imageVector = Icons.Rounded.AutoFixHigh,
+            contentDescription = null,
+            tint = VlcOrange,
+            modifier = Modifier.size(18.dp)
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(
+            text = stringResource(R.string.intro_outro_dialog_title),
+            color = VlcOrange
+          )
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          FilterChip(
+            selected = autoSkipIntro,
+            onClick = { onToggleAutoSkipIntro(!autoSkipIntro) },
+            label = { Text(stringResource(R.string.settings_auto_skip_intro), style = MaterialTheme.typography.labelSmall) },
+            colors = chipColors
+          )
+          FilterChip(
+            selected = autoSkipOutro,
+            onClick = { onToggleAutoSkipOutro(!autoSkipOutro) },
+            label = { Text(stringResource(R.string.settings_auto_skip_outro), style = MaterialTheme.typography.labelSmall) },
+            colors = chipColors
+          )
+          FilterChip(
+            selected = backgroundAudioPlay,
+            onClick = { onToggleBackgroundAudio(!backgroundAudioPlay) },
+            label = { Text(stringResource(R.string.player_background_audio_toggle), style = MaterialTheme.typography.labelSmall) },
+            colors = chipColors
+          )
+        }
+
+        HorizontalDivider(color = ObsidianBorder)
+
+        // A-B Repeat & Loop Mode
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+          Icon(Icons.Rounded.Repeat, contentDescription = null, tint = VlcOrange, modifier = Modifier.size(18.dp))
+          Text(stringResource(R.string.player_ab_repeat_title), style = MaterialTheme.typography.titleSmall, color = VlcOrange)
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          FilterChip(
+            selected = abPointAMs != null,
+            onClick = onSetAbPointA,
+            label = { Text(stringResource(R.string.player_ab_set_a), style = MaterialTheme.typography.labelSmall) },
+            colors = chipColors
+          )
+          FilterChip(
+            selected = abPointBMs != null,
+            onClick = onSetAbPointB,
+            label = { Text(stringResource(R.string.player_ab_set_b), style = MaterialTheme.typography.labelSmall) },
+            colors = chipColors
+          )
+          if (abPointAMs != null || abPointBMs != null) {
+            FilterChip(
+              selected = false,
+              onClick = onClearAbRepeat,
+              label = { Text(stringResource(R.string.player_ab_clear), style = MaterialTheme.typography.labelSmall) },
+              colors = chipColors
+            )
+          }
+        }
+        Text(stringResource(R.string.player_repeat_mode_title), style = MaterialTheme.typography.labelSmall, color = SecondaryGray)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          listOf(
+            "off" to R.string.player_repeat_off,
+            "one" to R.string.player_repeat_one,
+            "all" to R.string.player_repeat_all
+          ).forEach { (key, res) ->
+            FilterChip(
+              selected = repeatMode == key,
+              onClick = { onSelectRepeatMode(key) },
+              label = { Text(stringResource(res), style = MaterialTheme.typography.labelSmall) },
+              colors = chipColors
+            )
+          }
+        }
+
+        HorizontalDivider(color = ObsidianBorder)
+
         // Equalizer & Boost
         Row(
           verticalAlignment = Alignment.CenterVertically,
@@ -274,12 +398,7 @@ fun VlcToolsDialog(
               selected = eqPreset == key,
               onClick = { onSelectEqPreset(key) },
               label = { Text(stringResource(labelRes), style = MaterialTheme.typography.labelSmall) },
-              colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = VlcOrange,
-                selectedLabelColor = OnPrimaryBlack,
-                containerColor = ObsidianSurfaceElevated,
-                labelColor = SecondaryGray
-              )
+              colors = chipColors
             )
           }
         }
@@ -293,6 +412,51 @@ fun VlcToolsDialog(
           onValueChange = { onChangeAudioBoost(it.roundToInt()) },
           valueRange = 100f..200f,
           steps = 9,
+          colors = SliderDefaults.colors(
+            thumbColor = VlcOrange,
+            activeTrackColor = VlcOrange,
+            inactiveTrackColor = ObsidianSurfaceElevated
+          )
+        )
+
+        HorizontalDivider(color = ObsidianBorder)
+
+        // Subtitle Delay Sync & Night Dimmer
+        val delayPrefix = if (subtitleDelayMs > 0) "+" else ""
+        Text(
+          text = stringResource(R.string.player_sub_delay_title, "$delayPrefix$subtitleDelayMs"),
+          style = MaterialTheme.typography.labelSmall,
+          color = SecondaryGray
+        )
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+          listOf(-500, -100, 0, 100, 500).forEach { delta ->
+            FilterChip(
+              selected = delta == 0 && subtitleDelayMs == 0,
+              onClick = {
+                val next = if (delta == 0) 0 else subtitleDelayMs + delta
+                onChangeSubtitleDelay(next)
+              },
+              label = {
+                Text(
+                  text = if (delta == 0) "0 ms" else if (delta > 0) "+${delta}ms" else "${delta}ms",
+                  style = MaterialTheme.typography.labelSmall
+                )
+              },
+              colors = chipColors
+            )
+          }
+        }
+
+        Text(
+          text = stringResource(R.string.player_night_dimmer_title, nightDimmerPercent),
+          style = MaterialTheme.typography.labelSmall,
+          color = SecondaryGray
+        )
+        Slider(
+          value = nightDimmerPercent.toFloat(),
+          onValueChange = { onChangeNightDimmer(it.roundToInt()) },
+          valueRange = 0f..60f,
+          steps = 5,
           colors = SliderDefaults.colors(
             thumbColor = VlcOrange,
             activeTrackColor = VlcOrange,
@@ -324,12 +488,7 @@ fun VlcToolsDialog(
             selected = sleepMinutesRemaining == null && !sleepOnEpisodeEnd,
             onClick = { onSelectSleepMinutes(null) },
             label = { Text(stringResource(R.string.player_sleep_off), style = MaterialTheme.typography.labelSmall) },
-            colors = FilterChipDefaults.filterChipColors(
-              selectedContainerColor = VlcOrange,
-              selectedLabelColor = OnPrimaryBlack,
-              containerColor = ObsidianSurfaceElevated,
-              labelColor = SecondaryGray
-            )
+            colors = chipColors
           )
           listOf(15, 30, 45, 60).forEach { mins ->
             FilterChip(
@@ -341,30 +500,20 @@ fun VlcToolsDialog(
                   style = MaterialTheme.typography.labelSmall
                 )
               },
-              colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = VlcOrange,
-                selectedLabelColor = OnPrimaryBlack,
-                containerColor = ObsidianSurfaceElevated,
-                labelColor = SecondaryGray
-              )
+              colors = chipColors
             )
           }
           FilterChip(
             selected = sleepOnEpisodeEnd,
             onClick = onSelectSleepEndOfEpisode,
             label = { Text(stringResource(R.string.player_sleep_end_ep), style = MaterialTheme.typography.labelSmall) },
-            colors = FilterChipDefaults.filterChipColors(
-              selectedContainerColor = VlcOrange,
-              selectedLabelColor = OnPrimaryBlack,
-              containerColor = ObsidianSurfaceElevated,
-              labelColor = SecondaryGray
-            )
+            colors = chipColors
           )
         }
 
         HorizontalDivider(color = ObsidianBorder)
 
-        // Bookmark & PiP Actions
+        // Bookmark, Jump to Time, Screenshot, Media Info & PiP Actions
         OutlinedButton(
           onClick = {
             onAddBookmark()
@@ -372,17 +521,45 @@ fun VlcToolsDialog(
           },
           modifier = Modifier.fillMaxWidth()
         ) {
-          Icon(
-            imageVector = Icons.Rounded.BookmarkAdd,
-            contentDescription = null,
-            tint = VlcOrange,
-            modifier = Modifier.size(18.dp)
-          )
+          Icon(Icons.Rounded.BookmarkAdd, contentDescription = null, tint = VlcOrange, modifier = Modifier.size(18.dp))
           Spacer(modifier = Modifier.width(8.dp))
-          Text(
-            text = stringResource(R.string.player_bookmark_moment),
-            color = VlcOrange
-          )
+          Text(stringResource(R.string.player_bookmark_moment), color = VlcOrange)
+        }
+
+        OutlinedButton(
+          onClick = {
+            onDismiss()
+            onOpenJumpToTime()
+          },
+          modifier = Modifier.fillMaxWidth()
+        ) {
+          Icon(Icons.Rounded.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(stringResource(R.string.player_jump_to_time), color = MaterialTheme.colorScheme.onSurface)
+        }
+
+        OutlinedButton(
+          onClick = {
+            onDismiss()
+            onCaptureScreenshot()
+          },
+          modifier = Modifier.fillMaxWidth()
+        ) {
+          Icon(Icons.Rounded.CameraAlt, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(stringResource(R.string.player_screenshot), color = MaterialTheme.colorScheme.onSurface)
+        }
+
+        OutlinedButton(
+          onClick = {
+            onDismiss()
+            onOpenMediaInfo()
+          },
+          modifier = Modifier.fillMaxWidth()
+        ) {
+          Icon(Icons.Rounded.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(stringResource(R.string.player_media_info), color = MaterialTheme.colorScheme.onSurface)
         }
 
         if (canUsePip) {

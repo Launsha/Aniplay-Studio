@@ -28,14 +28,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.automirrored.rounded.ViewList
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarOutline
 import androidx.compose.material.icons.rounded.VideoLibrary
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -51,6 +55,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -91,6 +96,9 @@ fun PustakaTab(
   onSearchQueryChange: (String) -> Unit,
   onSelectGenre: (String?) -> Unit,
   onSelectYear: (Int?) -> Unit,
+  onSelectPlaylist: (Long?) -> Unit,
+  onCreatePlaylist: (String) -> Unit,
+  onDeletePlaylist: (Long) -> Unit,
   onToggleFavoritesOnly: () -> Unit,
   onSetSortOption: (LibrarySortOption) -> Unit,
   onToggleViewMode: () -> Unit,
@@ -99,11 +107,13 @@ fun PustakaTab(
   onOpenSettings: () -> Unit
 ) {
   var showSortMenu by remember { mutableStateOf(false) }
+  var showCreatePlaylistDialog by remember { mutableStateOf(false) }
 
   val isFiltering = state.searchQuery.isNotBlank() ||
     state.selectedGenre != null ||
     state.selectedYear != null ||
     state.selectedMalStatus != null ||
+    state.selectedPlaylistId != null ||
     state.favoritesOnly
 
   val columns = if (state.isListViewMode) {
@@ -260,7 +270,10 @@ fun PustakaTab(
         }
         item {
           FilterChip(
-            selected = state.selectedGenre == null && state.selectedYear == null && !state.favoritesOnly,
+            selected = state.selectedGenre == null &&
+              state.selectedYear == null &&
+              state.selectedPlaylistId == null &&
+              !state.favoritesOnly,
             onClick = onClearAllFilters,
             label = {
               Text(
@@ -299,6 +312,80 @@ fun PustakaTab(
               selectedLabelColor = OnPrimaryBlack,
               containerColor = ObsidianSurfaceElevated,
               labelColor = SecondaryGray
+            )
+          )
+        }
+      }
+
+      // Custom Playlists filter & creation row
+      LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        item {
+          FilterChip(
+            selected = false,
+            onClick = { showCreatePlaylistDialog = true },
+            leadingIcon = {
+              Icon(
+                imageVector = Icons.Rounded.Add,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp)
+              )
+            },
+            label = {
+              Text(
+                text = stringResource(R.string.playlist_create_button),
+                style = MaterialTheme.typography.labelSmall
+              )
+            },
+            colors = FilterChipDefaults.filterChipColors(
+              containerColor = VlcOrangeSoft,
+              labelColor = VlcOrange,
+              iconColor = VlcOrange
+            ),
+            modifier = Modifier.testTag("create_playlist_chip")
+          )
+        }
+        items(state.playlists, key = { it.id }) { playlist ->
+          val isSelected = state.selectedPlaylistId == playlist.id
+          FilterChip(
+            selected = isSelected,
+            onClick = { onSelectPlaylist(playlist.id) },
+            leadingIcon = {
+              Icon(
+                imageVector = Icons.AutoMirrored.Rounded.PlaylistPlay,
+                contentDescription = null,
+                modifier = Modifier.size(15.dp)
+              )
+            },
+            trailingIcon = if (isSelected) {
+              {
+                Icon(
+                  imageVector = Icons.Rounded.DeleteOutline,
+                  contentDescription = stringResource(R.string.action_delete),
+                  modifier = Modifier
+                    .size(16.dp)
+                    .clickable { onDeletePlaylist(playlist.id) }
+                )
+              }
+            } else {
+              null
+            },
+            label = {
+              Text(
+                text = "${playlist.name} (${playlist.animeCount})",
+                style = MaterialTheme.typography.labelSmall
+              )
+            },
+            colors = FilterChipDefaults.filterChipColors(
+              selectedContainerColor = VlcOrange,
+              selectedLabelColor = OnPrimaryBlack,
+              selectedLeadingIconColor = OnPrimaryBlack,
+              selectedTrailingIconColor = OnPrimaryBlack,
+              containerColor = ObsidianSurfaceElevated,
+              labelColor = SecondaryGray,
+              iconColor = VlcOrange
             )
           )
         }
@@ -343,6 +430,63 @@ fun PustakaTab(
       }
     }
   }
+
+  if (showCreatePlaylistDialog) {
+    CreatePlaylistDialog(
+      onCreate = { name ->
+        onCreatePlaylist(name)
+        showCreatePlaylistDialog = false
+      },
+      onDismiss = { showCreatePlaylistDialog = false }
+    )
+  }
+}
+
+@Composable
+private fun CreatePlaylistDialog(
+  onCreate: (String) -> Unit,
+  onDismiss: () -> Unit
+) {
+  var name by remember { mutableStateOf("") }
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    containerColor = ObsidianSurface,
+    title = {
+      Text(
+        text = stringResource(R.string.playlist_create_title),
+        style = MaterialTheme.typography.titleLarge
+      )
+    },
+    text = {
+      OutlinedTextField(
+        value = name,
+        onValueChange = { name = it },
+        placeholder = { Text(stringResource(R.string.playlist_name_hint)) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+      )
+    },
+    confirmButton = {
+      Button(
+        onClick = {
+          val clean = name.trim()
+          if (clean.isNotBlank()) onCreate(clean)
+        },
+        enabled = name.isNotBlank(),
+        colors = ButtonDefaults.buttonColors(
+          containerColor = VlcOrange,
+          contentColor = OnPrimaryBlack
+        )
+      ) {
+        Text(stringResource(R.string.action_save))
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss) {
+        Text(stringResource(R.string.action_cancel), color = SecondaryGray)
+      }
+    }
+  )
 }
 
 @Composable

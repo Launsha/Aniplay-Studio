@@ -2,6 +2,7 @@ package com.example.ui.detail
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -38,7 +39,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DeleteOutline
@@ -47,11 +50,14 @@ import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -88,6 +94,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.data.local.entity.AnimeEntity
 import com.example.data.local.entity.EpisodeEntity
+import com.example.data.local.entity.PlaylistSummary
 import com.example.data.remote.MalAnimeCandidate
 import com.example.ui.components.VideoThumbnail
 import com.example.ui.theme.ObsidianBackground
@@ -113,7 +120,14 @@ fun DetailScreen(
   val state by viewModel.uiState.collectAsStateWithLifecycle()
   var showEditDialog by remember { mutableStateOf(false) }
   var showMalSearchDialog by remember { mutableStateOf(false) }
+  var showPlaylistDialog by remember { mutableStateOf(false) }
   var synopsisExpanded by remember { mutableStateOf(false) }
+
+  LaunchedEffect(state.introOutroStatusMessage) {
+    val msg = state.introOutroStatusMessage ?: return@LaunchedEffect
+    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+    viewModel.consumeIntroOutroMessage()
+  }
 
   val anime = state.anime
 
@@ -314,6 +328,118 @@ fun DetailScreen(
         }
 
         if (anime != null) {
+          val statusLabel = when (anime.malStatus) {
+            "completed" -> stringResource(R.string.mal_status_completed)
+            "on_hold" -> stringResource(R.string.mal_status_on_hold)
+            "dropped" -> stringResource(R.string.mal_status_dropped)
+            "plan_to_watch" -> stringResource(R.string.mal_status_plan)
+            else -> stringResource(R.string.mal_status_watching)
+          }
+          val shareText = stringResource(
+            R.string.detail_share_text,
+            anime.title,
+            state.episodes.size,
+            statusLabel
+          )
+          val shareChooserTitle = stringResource(R.string.detail_share_anime)
+
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+          ) {
+            OutlinedButton(
+              onClick = { viewModel.scanAllEpisodesIntroOutro() },
+              enabled = !state.isScanningIntroOutro,
+              shape = RoundedCornerShape(12.dp),
+              contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+              modifier = Modifier
+                .weight(1.35f)
+                .height(48.dp)
+                .testTag("detail_scan_intro_outro_button")
+            ) {
+              if (state.isScanningIntroOutro) {
+                CircularProgressIndicator(
+                  color = VlcOrange,
+                  strokeWidth = 2.dp,
+                  modifier = Modifier.size(16.dp)
+                )
+              } else {
+                Icon(
+                  imageVector = Icons.Rounded.AutoFixHigh,
+                  contentDescription = null,
+                  tint = VlcOrange,
+                  modifier = Modifier.size(16.dp)
+                )
+              }
+              Spacer(modifier = Modifier.width(6.dp))
+              Text(
+                text = stringResource(R.string.detail_scan_intro_outro),
+                style = MaterialTheme.typography.labelMedium,
+                color = VlcOrange,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+              )
+            }
+
+            OutlinedButton(
+              onClick = { showPlaylistDialog = true },
+              shape = RoundedCornerShape(12.dp),
+              contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+              modifier = Modifier
+                .weight(0.9f)
+                .height(48.dp)
+                .testTag("detail_playlist_button")
+            ) {
+              Icon(
+                imageVector = Icons.AutoMirrored.Rounded.PlaylistAdd,
+                contentDescription = null,
+                tint = VlcOrange,
+                modifier = Modifier.size(17.dp)
+              )
+              Spacer(modifier = Modifier.width(4.dp))
+              Text(
+                text = stringResource(R.string.detail_add_to_playlist),
+                style = MaterialTheme.typography.labelMedium,
+                color = VlcOrange,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+              )
+            }
+
+            OutlinedButton(
+              onClick = {
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                  type = "text/plain"
+                  putExtra(Intent.EXTRA_TEXT, shareText)
+                }
+                context.startActivity(Intent.createChooser(intent, shareChooserTitle))
+              },
+              shape = RoundedCornerShape(12.dp),
+              contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+              modifier = Modifier
+                .weight(0.85f)
+                .height(48.dp)
+                .testTag("detail_share_button")
+            ) {
+              Icon(
+                imageVector = Icons.Rounded.Share,
+                contentDescription = null,
+                tint = VlcOrange,
+                modifier = Modifier.size(16.dp)
+              )
+              Spacer(modifier = Modifier.width(4.dp))
+              Text(
+                text = stringResource(R.string.detail_share_anime),
+                style = MaterialTheme.typography.labelMedium,
+                color = VlcOrange,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+              )
+            }
+          }
+
           // Synopsis card
           Surface(
             color = ObsidianSurface,
@@ -511,6 +637,16 @@ fun DetailScreen(
         showMalSearchDialog = false
       },
       onDismiss = { showMalSearchDialog = false }
+    )
+  }
+
+  if (showPlaylistDialog && anime != null) {
+    ManageAnimePlaylistDialog(
+      playlists = state.playlists,
+      memberPlaylistIds = state.animePlaylistIds,
+      onToggleMembership = viewModel::togglePlaylistMembership,
+      onCreatePlaylist = viewModel::createPlaylistAndAddAnime,
+      onDismiss = { showPlaylistDialog = false }
     )
   }
 }
@@ -784,9 +920,9 @@ private fun EpisodeRowItem(
           maxLines = 1,
           overflow = TextOverflow.Ellipsis
         )
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        FlowRow(
+          horizontalArrangement = Arrangement.spacedBy(6.dp),
+          verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
           if (episode.durationMs > 0L) {
             Text(
@@ -816,6 +952,40 @@ private fun EpisodeRowItem(
               style = MaterialTheme.typography.labelSmall,
               color = VlcOrange
             )
+          }
+          if (episode.introStartMs >= 0L && episode.introEndMs > episode.introStartMs) {
+            Surface(
+              color = ObsidianSurfaceElevated,
+              shape = RoundedCornerShape(6.dp),
+              modifier = Modifier.border(1.dp, VlcOrange.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
+            ) {
+              Text(
+                text = stringResource(
+                  R.string.detail_intro_badge,
+                  "${TimeFormatters.formatDuration(episode.introStartMs)}-${TimeFormatters.formatDuration(episode.introEndMs)}"
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = VlcOrange,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+              )
+            }
+          }
+          if (episode.outroStartMs >= 0L && episode.outroEndMs > episode.outroStartMs) {
+            Surface(
+              color = ObsidianSurfaceElevated,
+              shape = RoundedCornerShape(6.dp),
+              modifier = Modifier.border(1.dp, VlcOrange.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
+            ) {
+              Text(
+                text = stringResource(
+                  R.string.detail_outro_badge,
+                  "${TimeFormatters.formatDuration(episode.outroStartMs)}-${TimeFormatters.formatDuration(episode.outroEndMs)}"
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = VlcOrange,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+              )
+            }
           }
         }
       }
@@ -1145,6 +1315,122 @@ private fun MalSearchDialog(
     confirmButton = {
       TextButton(onClick = onDismiss) {
         Text(stringResource(R.string.action_close), color = SecondaryGray)
+      }
+    }
+  )
+}
+
+@Composable
+private fun ManageAnimePlaylistDialog(
+  playlists: List<PlaylistSummary>,
+  memberPlaylistIds: Set<Long>,
+  onToggleMembership: (Long, Boolean) -> Unit,
+  onCreatePlaylist: (String) -> Unit,
+  onDismiss: () -> Unit
+) {
+  var newPlaylistName by remember { mutableStateOf("") }
+
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    containerColor = ObsidianSurface,
+    title = {
+      Text(
+        text = stringResource(R.string.detail_playlist_dialog_title),
+        style = MaterialTheme.typography.titleLarge
+      )
+    },
+    text = {
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .heightIn(max = 380.dp)
+          .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+      ) {
+        if (playlists.isEmpty()) {
+          Text(
+            text = stringResource(R.string.playlist_empty),
+            style = MaterialTheme.typography.bodySmall,
+            color = SecondaryGray
+          )
+        } else {
+          playlists.forEach { playlist ->
+            val checked = playlist.id in memberPlaylistIds
+            Surface(
+              color = ObsidianSurfaceElevated,
+              shape = RoundedCornerShape(10.dp),
+              modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .clickable { onToggleMembership(playlist.id, !checked) }
+            ) {
+              Row(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+              ) {
+                Checkbox(
+                  checked = checked,
+                  onCheckedChange = { onToggleMembership(playlist.id, it) },
+                  colors = CheckboxDefaults.colors(
+                    checkedColor = VlcOrange,
+                    checkmarkColor = OnPrimaryBlack
+                  )
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                  Text(
+                    text = playlist.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                  )
+                  Text(
+                    text = stringResource(R.string.playlist_item_count, playlist.animeCount),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = SecondaryGray
+                  )
+                }
+              }
+            }
+          }
+        }
+
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          OutlinedTextField(
+            value = newPlaylistName,
+            onValueChange = { newPlaylistName = it },
+            placeholder = { Text(stringResource(R.string.playlist_name_hint)) },
+            singleLine = true,
+            modifier = Modifier.weight(1f)
+          )
+          Button(
+            onClick = {
+              val trimmed = newPlaylistName.trim()
+              if (trimmed.isNotBlank()) {
+                onCreatePlaylist(trimmed)
+                newPlaylistName = ""
+              }
+            },
+            enabled = newPlaylistName.isNotBlank(),
+            colors = ButtonDefaults.buttonColors(
+              containerColor = VlcOrange,
+              contentColor = OnPrimaryBlack
+            ),
+            modifier = Modifier.height(48.dp)
+          ) {
+            Text(stringResource(R.string.action_add), style = MaterialTheme.typography.labelMedium)
+          }
+        }
+      }
+    },
+    confirmButton = {
+      TextButton(onClick = onDismiss) {
+        Text(stringResource(R.string.action_close), color = VlcOrange)
       }
     }
   )

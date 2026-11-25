@@ -6,9 +6,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.example.R
 import com.example.data.local.entity.AnimeEntity
 import com.example.data.local.entity.EpisodeBookmarkEntity
 import com.example.data.local.entity.EpisodeEntity
+import com.example.data.local.entity.PlaylistSummary
 import com.example.data.remote.MalAnimeCandidate
 import com.example.data.repository.AnimeRepository
 import com.example.ui.navigation.DetailRoute
@@ -37,6 +39,10 @@ data class DetailUiState(
   val anime: AnimeEntity? = null,
   val episodes: List<EpisodeEntity> = emptyList(),
   val bookmarks: List<EpisodeBookmarkEntity> = emptyList(),
+  val playlists: List<PlaylistSummary> = emptyList(),
+  val animePlaylistIds: Set<Long> = emptySet(),
+  val isScanningIntroOutro: Boolean = false,
+  val introOutroStatusMessage: String? = null,
   val nextToPlayEpisode: EpisodeEntity? = null,
   val malSearch: MalSearchUiState = MalSearchUiState()
 )
@@ -50,13 +56,32 @@ class DetailViewModel @Inject constructor(
 
   private val route: DetailRoute = savedStateHandle.toRoute()
   private val malSearchState = MutableStateFlow(MalSearchUiState())
+  private val isScanningIntroOutro = MutableStateFlow(false)
+  private val introOutroStatusMessage = MutableStateFlow<String?>(null)
 
   val uiState: StateFlow<DetailUiState> = combine(
     repository.observeAnime(route.animeId),
     repository.observeEpisodes(route.animeId),
     repository.observeBookmarksForAnime(route.animeId),
-    malSearchState
-  ) { anime, episodes, bookmarks, malSearch ->
+    repository.observePlaylists(),
+    repository.observePlaylistIdsForAnime(route.animeId),
+    malSearchState,
+    isScanningIntroOutro,
+    introOutroStatusMessage
+  ) { values ->
+    val anime = values[0] as AnimeEntity?
+    @Suppress("UNCHECKED_CAST")
+    val episodes = values[1] as List<EpisodeEntity>
+    @Suppress("UNCHECKED_CAST")
+    val bookmarks = values[2] as List<EpisodeBookmarkEntity>
+    @Suppress("UNCHECKED_CAST")
+    val playlists = values[3] as List<PlaylistSummary>
+    @Suppress("UNCHECKED_CAST")
+    val animePlaylistIds = values[4] as List<Long>
+    val malSearch = values[5] as MalSearchUiState
+    val scanningIntroOutro = values[6] as Boolean
+    val statusMsg = values[7] as String?
+
     val resumeCandidate = episodes
       .filter { it.lastPositionMs > 0L && !it.isWatched }
       .maxByOrNull { it.lastPlayedAt }
@@ -67,6 +92,10 @@ class DetailViewModel @Inject constructor(
       anime = anime,
       episodes = episodes,
       bookmarks = bookmarks,
+      playlists = playlists,
+      animePlaylistIds = animePlaylistIds.toSet(),
+      isScanningIntroOutro = scanningIntroOutro,
+      introOutroStatusMessage = statusMsg,
       nextToPlayEpisode = resumeCandidate,
       malSearch = malSearch
     )
@@ -92,6 +121,41 @@ class DetailViewModel @Inject constructor(
   fun toggleEpisodeWatched(episode: EpisodeEntity) {
     viewModelScope.launch {
       repository.setEpisodeWatched(episode.id, !episode.isWatched)
+    }
+  }
+
+  fun scanAllEpisodesIntroOutro() {
+    if (isScanningIntroOutro.value) return
+    viewModelScope.launch {
+      isScanningIntroOutro.value = true
+      val (detected, total) = runCatching {
+        repository.scanIntroOutroForAnime(route.animeId)
+      }.getOrDefault(0 to uiState.value.episodes.size)
+      introOutroStatusMessage.value = context.getString(
+        R.string.detail_scan_intro_outro_result,
+        detected,
+        total
+      )
+      isScanningIntroOutro.value = false
+    }
+  }
+
+  fun consumeIntroOutroMessage() {
+    introOutroStatusMessage.value = null
+  }
+
+  fun createPlaylistAndAddAnime(name: String) {
+    viewModelScope.launch {
+      val id = repository.createPlaylist(name)
+      if (id > 0L) {
+        repository.toggleAnimeInPlaylist(id, route.animeId, true)
+      }
+    }
+  }
+
+  fun togglePlaylistMembership(playlistId: Long, add: Boolean) {
+    viewModelScope.launch {
+      repository.toggleAnimeInPlaylist(playlistId, route.animeId, add)
     }
   }
 

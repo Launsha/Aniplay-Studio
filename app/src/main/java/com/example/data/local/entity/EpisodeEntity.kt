@@ -31,5 +31,10 @@ data class EpisodeEntity(
   val lastPositionMs: Long = 0L,
   val isWatched: Boolean = false,
   val subtitleUri: String? = null,
-  val lastPlayedAt: Long = 0L
+  val lastPlayedAt: Long = 0L,
+  val introStartMs: Long = -1L,
+  val introEndMs: Long = -1L,
+  val outroStartMs: Long = -1L,
+  val outroEndMs: Long = -1L,
+  val introOutroSource: String = ""
 )

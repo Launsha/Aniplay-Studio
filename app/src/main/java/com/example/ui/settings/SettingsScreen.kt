@@ -512,6 +512,13 @@ fun SettingsContent(
                 )
                 HorizontalDivider(color = ObsidianBorder)
                 SettingsToggleRow(
+                  title = stringResource(R.string.settings_horizontal_seek),
+                  subtitle = stringResource(R.string.settings_horizontal_seek_desc),
+                  checked = state.settings.enableHorizontalSwipeSeek,
+                  onCheckedChange = viewModel::setEnableHorizontalSwipeSeek
+                )
+                HorizontalDivider(color = ObsidianBorder)
+                SettingsToggleRow(
                   title = stringResource(R.string.settings_double_tap_toggle),
                   subtitle = stringResource(R.string.settings_double_tap_desc),
                   checked = state.settings.enableDoubleTapSeek,
@@ -519,10 +526,42 @@ fun SettingsContent(
                 )
                 HorizontalDivider(color = ObsidianBorder)
                 SettingsToggleRow(
+                  title = stringResource(R.string.settings_auto_scan_intro),
+                  subtitle = stringResource(R.string.settings_auto_scan_intro_desc),
+                  checked = state.settings.autoScanIntroOutro,
+                  onCheckedChange = viewModel::setAutoScanIntroOutro
+                )
+                HorizontalDivider(color = ObsidianBorder)
+                SettingsToggleRow(
+                  title = stringResource(R.string.settings_auto_skip_intro),
+                  subtitle = stringResource(R.string.settings_auto_skip_intro_desc),
+                  checked = state.settings.autoSkipIntro,
+                  onCheckedChange = viewModel::setAutoSkipIntro
+                )
+                HorizontalDivider(color = ObsidianBorder)
+                SettingsToggleRow(
+                  title = stringResource(R.string.settings_auto_skip_outro),
+                  subtitle = stringResource(R.string.settings_auto_skip_outro_desc),
+                  checked = state.settings.autoSkipOutro,
+                  onCheckedChange = viewModel::setAutoSkipOutro
+                )
+                HorizontalDivider(color = ObsidianBorder)
+                SettingsToggleRow(
                   title = stringResource(R.string.settings_clock_battery),
                   subtitle = stringResource(R.string.settings_clock_battery_desc),
                   checked = state.settings.showClockAndBatteryInPlayer,
                   onCheckedChange = viewModel::setShowClockAndBatteryInPlayer
+                )
+                HorizontalDivider(color = ObsidianBorder)
+                SettingsChipGroup(
+                  title = stringResource(R.string.player_repeat_mode_title),
+                  options = listOf(
+                    "off" to stringResource(R.string.player_repeat_off),
+                    "one" to stringResource(R.string.player_repeat_one),
+                    "all" to stringResource(R.string.player_repeat_all)
+                  ),
+                  selectedValue = state.settings.defaultRepeatMode,
+                  onSelect = viewModel::setDefaultRepeatMode
                 )
                 HorizontalDivider(color = ObsidianBorder)
                 SettingsToggleRow(
