@@ -2,35 +2,28 @@ package com.example.ui.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.EmojiEvents
-import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -48,12 +41,12 @@ import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.data.local.entity.EpisodeWithAnime
 import com.example.ui.components.VideoThumbnail
-import com.example.ui.theme.ObsidianBorder
-import com.example.ui.theme.ObsidianSurface
+import com.example.ui.theme.AnimePlayRoleShapes
+import com.example.ui.theme.ObsidianDivider
 import com.example.ui.theme.ObsidianSurfaceElevated
 import com.example.ui.theme.SecondaryGray
+import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.VlcOrange
-import com.example.ui.theme.VlcOrangeSoft
 import com.example.util.TimeFormatters
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
@@ -76,8 +69,8 @@ fun StatistikTab(
   onEpisodeClick: (Long) -> Unit
 ) {
   LazyColumn(
-    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 28.dp),
-    verticalArrangement = Arrangement.spacedBy(16.dp),
+    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
+    verticalArrangement = Arrangement.spacedBy(24.dp),
     modifier = Modifier
       .fillMaxSize()
       .testTag("statistik_tab")
@@ -91,106 +84,83 @@ fun StatistikTab(
     }
 
     item {
-      Surface(
-        color = ObsidianSurface,
-        shape = RoundedCornerShape(16.dp),
+      Row(
         modifier = Modifier
           .fillMaxWidth()
-          .border(1.dp, VlcOrange.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
-          .testTag("stats_streak_card")
+          .testTag("stats_streak_card"),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
       ) {
         Row(
-          modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
           verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.SpaceBetween
+          horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-          ) {
-            Icon(
-              imageVector = Icons.Rounded.LocalFireDepartment,
-              contentDescription = null,
-              tint = VlcOrange,
-              modifier = Modifier.size(24.dp)
-            )
-            Text(
-              text = stringResource(R.string.stats_streak_label),
-              style = MaterialTheme.typography.titleMedium,
-              color = MaterialTheme.colorScheme.onSurface
-            )
-          }
-          Surface(
-            color = VlcOrangeSoft,
-            shape = RoundedCornerShape(10.dp)
-          ) {
-            Text(
-              text = stringResource(R.string.stats_streak_days, state.watchStreakDays),
-              style = MaterialTheme.typography.titleSmall,
-              color = VlcOrange,
-              modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-            )
-          }
+          Icon(
+            imageVector = Icons.Rounded.LocalFireDepartment,
+            contentDescription = null,
+            tint = TextPrimary,
+            modifier = Modifier.size(22.dp)
+          )
+          Text(
+            text = stringResource(R.string.stats_streak_label),
+            style = MaterialTheme.typography.titleMedium,
+            color = TextPrimary
+          )
         }
-      }
-    }
-
-    item {
-      AnimeStatisticsSection(weeklyStats = state.weeklyStats)
-    }
-
-    item {
-      AchievementsSection(
-        achievements = state.achievements,
-        completedAnimeCount = state.completedAnimeCount
-      )
-    }
-
-    if (state.totalLibraryCount > 0) {
-      item {
-        MalStatusBreakdownCard(
-          totalCount = state.totalLibraryCount,
-          breakdown = state.malStatusBreakdown
+        Text(
+          text = stringResource(R.string.stats_streak_days, state.watchStreakDays),
+          style = MaterialTheme.typography.titleMedium,
+          color = TextPrimary
         )
       }
     }
 
     item {
-      Surface(
-        color = ObsidianSurface,
-        shape = RoundedCornerShape(18.dp),
-        modifier = Modifier
-          .fillMaxWidth()
-          .border(1.dp, ObsidianBorder, RoundedCornerShape(18.dp))
-      ) {
-        Column(
-          modifier = Modifier.padding(14.dp),
-          verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-          ) {
-            Icon(
-              imageVector = Icons.Rounded.History,
-              contentDescription = null,
-              tint = VlcOrange,
-              modifier = Modifier.size(20.dp)
-            )
-            Text(
-              text = stringResource(R.string.stats_recent_history_title),
-              style = MaterialTheme.typography.titleMedium,
-              color = MaterialTheme.colorScheme.onSurface
-            )
-          }
+      Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        HorizontalDivider(color = ObsidianDivider)
+        AnimeStatisticsSection(weeklyStats = state.weeklyStats)
+      }
+    }
 
-          if (state.recentHistory.isEmpty()) {
-            Text(
-              text = stringResource(R.string.stats_recent_history_empty),
-              style = MaterialTheme.typography.bodySmall,
-              color = SecondaryGray
-            )
-          } else {
+    item {
+      Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        HorizontalDivider(color = ObsidianDivider)
+        AchievementsSection(
+          achievements = state.achievements,
+          completedAnimeCount = state.completedAnimeCount
+        )
+      }
+    }
+
+    if (state.totalLibraryCount > 0) {
+      item {
+        Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+          HorizontalDivider(color = ObsidianDivider)
+          MalStatusBreakdownSection(
+            totalCount = state.totalLibraryCount,
+            breakdown = state.malStatusBreakdown
+          )
+        }
+      }
+    }
+
+    item {
+      Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        HorizontalDivider(color = ObsidianDivider)
+        Text(
+          text = stringResource(R.string.stats_recent_history_title),
+          style = MaterialTheme.typography.titleMedium,
+          color = TextPrimary
+        )
+
+        if (state.recentHistory.isEmpty()) {
+          Text(
+            text = stringResource(R.string.stats_recent_history_empty),
+            style = MaterialTheme.typography.bodySmall,
+            color = SecondaryGray
+          )
+        } else {
+          Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             state.recentHistory.forEach { historyItem ->
               RecentHistoryRow(
                 item = historyItem,
@@ -236,100 +206,79 @@ fun AnimeStatisticsSection(
     }
   }
 
-  Surface(
-    color = ObsidianSurface,
-    shape = RoundedCornerShape(18.dp),
+  Column(
     modifier = Modifier
       .fillMaxWidth()
-      .border(1.dp, ObsidianBorder, RoundedCornerShape(18.dp))
-      .testTag("anime_statistics_section")
+      .testTag("anime_statistics_section"),
+    verticalArrangement = Arrangement.spacedBy(12.dp)
   ) {
-    Column(
-      modifier = Modifier.padding(14.dp),
-      verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-      ) {
-        Icon(
-          imageVector = Icons.Rounded.BarChart,
-          contentDescription = null,
-          tint = VlcOrange,
-          modifier = Modifier.size(20.dp)
-        )
-        Column {
-          Text(
-            text = stringResource(R.string.home_anime_statistics_title),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
-          )
-          Text(
-            text = stringResource(R.string.home_anime_statistics_subtitle),
-            style = MaterialTheme.typography.labelSmall,
-            color = SecondaryGray
-          )
-        }
-      }
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+      Text(
+        text = stringResource(R.string.home_anime_statistics_title),
+        style = MaterialTheme.typography.titleMedium,
+        color = TextPrimary
+      )
+      Text(
+        text = stringResource(R.string.home_anime_statistics_subtitle),
+        style = MaterialTheme.typography.bodySmall,
+        color = SecondaryGray
+      )
+    }
 
-      if (!hasAnyActivity) {
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .height(110.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(ObsidianSurfaceElevated.copy(alpha = 0.6f))
-            .padding(16.dp),
-          contentAlignment = Alignment.Center
-        ) {
-          Text(
-            text = stringResource(R.string.home_statistics_no_data),
-            style = MaterialTheme.typography.bodySmall,
-            color = SecondaryGray,
-            textAlign = TextAlign.Center
-          )
-        }
-      } else {
-        ProvideVicoTheme(theme = rememberM3VicoTheme()) {
-          CartesianChartHost(
-            chart = rememberCartesianChart(
-              rememberColumnCartesianLayer(
-                columnProvider = ColumnCartesianLayer.ColumnProvider.series(
-                  rememberLineComponent(
-                    fill = Fill(VlcOrange),
-                    thickness = 16.dp
-                  )
+    if (!hasAnyActivity) {
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(96.dp),
+        contentAlignment = Alignment.Center
+      ) {
+        Text(
+          text = stringResource(R.string.home_statistics_no_data),
+          style = MaterialTheme.typography.bodySmall,
+          color = SecondaryGray,
+          textAlign = TextAlign.Center
+        )
+      }
+    } else {
+      ProvideVicoTheme(theme = rememberM3VicoTheme()) {
+        CartesianChartHost(
+          chart = rememberCartesianChart(
+            rememberColumnCartesianLayer(
+              columnProvider = ColumnCartesianLayer.ColumnProvider.series(
+                rememberLineComponent(
+                  fill = Fill(VlcOrange),
+                  thickness = 16.dp
                 )
-              ),
-              startAxis = VerticalAxis.rememberStart(),
-              bottomAxis = HorizontalAxis.rememberBottom(
-                valueFormatter = bottomFormatter
               )
             ),
-            modelProducer = modelProducer,
-            modifier = Modifier
-              .fillMaxWidth()
-              .height(170.dp)
-          )
-        }
+            startAxis = VerticalAxis.rememberStart(),
+            bottomAxis = HorizontalAxis.rememberBottom(
+              valueFormatter = bottomFormatter
+            )
+          ),
+          modelProducer = modelProducer,
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(170.dp)
+        )
+      }
 
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-          weeklyStats.forEachIndexed { index, stat ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-              Text(
-                text = dayLabels.getOrElse(index) { "" },
-                style = MaterialTheme.typography.labelSmall,
-                color = SecondaryGray
-              )
-              Text(
-                text = "${stat.minutes.roundToInt()}m",
-                style = MaterialTheme.typography.labelSmall,
-                color = if (stat.minutes > 0f) VlcOrange else SecondaryGray.copy(alpha = 0.6f)
-              )
-            }
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+      ) {
+        weeklyStats.forEachIndexed { index, stat ->
+          Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+              text = dayLabels.getOrElse(index) { "" },
+              style = MaterialTheme.typography.labelSmall,
+              color = SecondaryGray
+            )
+            Text(
+              text = "${stat.minutes.roundToInt()}m",
+              style = MaterialTheme.typography.labelSmall,
+              color = if (stat.minutes > 0f) TextPrimary else SecondaryGray.copy(alpha = 0.6f)
+            )
           }
         }
       }
@@ -342,122 +291,85 @@ private fun AchievementsSection(
   achievements: List<MilestoneInfo>,
   completedAnimeCount: Int
 ) {
-  Surface(
-    color = ObsidianSurface,
-    shape = RoundedCornerShape(18.dp),
+  Column(
     modifier = Modifier
       .fillMaxWidth()
-      .border(1.dp, ObsidianBorder, RoundedCornerShape(18.dp))
-      .testTag("stats_achievements_section")
+      .testTag("stats_achievements_section"),
+    verticalArrangement = Arrangement.spacedBy(12.dp)
   ) {
-    Column(
-      modifier = Modifier.padding(14.dp),
-      verticalArrangement = Arrangement.spacedBy(10.dp)
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically
     ) {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          Icon(
-            imageVector = Icons.Rounded.EmojiEvents,
-            contentDescription = null,
-            tint = VlcOrange,
-            modifier = Modifier.size(20.dp)
-          )
-          Text(
-            text = stringResource(R.string.stats_achievements_title),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
-          )
-        }
-        Surface(
-          color = VlcOrangeSoft,
-          shape = RoundedCornerShape(8.dp)
-        ) {
-          Text(
-            text = "${stringResource(R.string.stats_completed_series_label)}: $completedAnimeCount",
-            style = MaterialTheme.typography.labelSmall,
-            color = VlcOrange,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-          )
-        }
-      }
+      Text(
+        text = stringResource(R.string.stats_achievements_title),
+        style = MaterialTheme.typography.titleMedium,
+        color = TextPrimary
+      )
+      Text(
+        text = "${stringResource(R.string.stats_completed_series_label)}: $completedAnimeCount",
+        style = MaterialTheme.typography.labelSmall,
+        color = SecondaryGray
+      )
+    }
 
-      if (achievements.any { it.isUnlocked }) {
-        Row(
+    if (achievements.any { it.isUnlocked }) {
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+      ) {
+        Image(
+          painter = painterResource(id = R.drawable.img_achievement_celebration),
+          contentDescription = stringResource(R.string.cd_celebration_illustration),
+          contentScale = ContentScale.Crop,
           modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(VlcOrangeSoft.copy(alpha = 0.3f))
-            .border(1.dp, VlcOrange.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-            .padding(10.dp),
+            .size(width = 64.dp, height = 48.dp)
+            .clip(AnimePlayRoleShapes.Poster)
+        )
+        Text(
+          text = stringResource(R.string.celebration_title),
+          style = MaterialTheme.typography.titleSmall,
+          color = TextPrimary
+        )
+      }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+      achievements.forEach { milestone ->
+        Row(
+          modifier = Modifier.fillMaxWidth(),
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-          Image(
-            painter = painterResource(id = R.drawable.img_achievement_celebration),
-            contentDescription = stringResource(R.string.cd_celebration_illustration),
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-              .size(width = 64.dp, height = 48.dp)
-              .clip(RoundedCornerShape(8.dp))
+          Icon(
+            imageVector = if (milestone.isUnlocked) Icons.Rounded.CheckCircle else Icons.Rounded.Lock,
+            contentDescription = null,
+            tint = if (milestone.isUnlocked) VlcOrange else SecondaryGray,
+            modifier = Modifier.size(20.dp)
           )
-          Text(
-            text = stringResource(R.string.celebration_title),
-            style = MaterialTheme.typography.titleSmall,
-            color = VlcOrange
-          )
-        }
-      }
-
-      achievements.forEach { milestone ->
-        Surface(
-          color = if (milestone.isUnlocked) VlcOrangeSoft.copy(alpha = 0.2f) else ObsidianSurfaceElevated,
-          shape = RoundedCornerShape(12.dp),
-          modifier = Modifier
-            .fillMaxWidth()
-            .border(
-              1.dp,
-              if (milestone.isUnlocked) VlcOrange.copy(alpha = 0.4f) else ObsidianBorder,
-              RoundedCornerShape(12.dp)
-            )
-        ) {
-          Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-          ) {
-            Icon(
-              imageVector = if (milestone.isUnlocked) Icons.Rounded.CheckCircle else Icons.Rounded.Lock,
-              contentDescription = null,
-              tint = if (milestone.isUnlocked) VlcOrange else SecondaryGray,
-              modifier = Modifier.size(22.dp)
-            )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-              Text(
-                text = stringResource(milestone.titleRes),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface
-              )
-              Text(
-                text = stringResource(milestone.descRes),
-                style = MaterialTheme.typography.bodySmall,
-                color = SecondaryGray
-              )
-            }
+          Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-              text = stringResource(
-                if (milestone.isUnlocked) R.string.milestone_unlocked_badge else R.string.milestone_locked_badge
-              ),
-              style = MaterialTheme.typography.labelSmall,
-              color = if (milestone.isUnlocked) VlcOrange else SecondaryGray
+              text = stringResource(milestone.titleRes),
+              style = MaterialTheme.typography.titleSmall,
+              color = TextPrimary
+            )
+            Text(
+              text = stringResource(milestone.descRes),
+              style = MaterialTheme.typography.bodySmall,
+              color = SecondaryGray
             )
           }
+          Text(
+            text = stringResource(
+              if (milestone.isUnlocked) R.string.milestone_unlocked_badge else R.string.milestone_locked_badge
+            ),
+            style = MaterialTheme.typography.labelSmall,
+            color = if (milestone.isUnlocked) TextPrimary else SecondaryGray
+          )
         }
       }
     }
@@ -465,7 +377,7 @@ private fun AchievementsSection(
 }
 
 @Composable
-private fun MalStatusBreakdownCard(
+private fun MalStatusBreakdownSection(
   totalCount: Int,
   breakdown: Map<String, Int>
 ) {
@@ -476,51 +388,43 @@ private fun MalStatusBreakdownCard(
     "on_hold" to R.string.mal_status_on_hold,
     "dropped" to R.string.mal_status_dropped
   )
-  Surface(
-    color = ObsidianSurface,
-    shape = RoundedCornerShape(18.dp),
-    modifier = Modifier
-      .fillMaxWidth()
-      .border(1.dp, ObsidianBorder, RoundedCornerShape(18.dp))
+  Column(
+    modifier = Modifier.fillMaxWidth(),
+    verticalArrangement = Arrangement.spacedBy(10.dp)
   ) {
-    Column(
-      modifier = Modifier.padding(14.dp),
-      verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-      Text(
-        text = stringResource(R.string.stats_mal_breakdown_title),
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onSurface
-      )
-      statuses.forEach { (key, labelRes) ->
-        val count = breakdown[key] ?: 0
-        val fraction = (count.toFloat() / totalCount.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f)
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-          ) {
-            Text(
-              text = stringResource(labelRes),
-              style = MaterialTheme.typography.labelSmall,
-              color = SecondaryGray
-            )
-            Text(
-              text = count.toString(),
-              style = MaterialTheme.typography.labelSmall,
-              color = if (count > 0) VlcOrange else SecondaryGray
-            )
-          }
-          LinearProgressIndicator(
-            progress = { fraction },
-            color = VlcOrange,
-            trackColor = ObsidianSurfaceElevated,
-            modifier = Modifier
-              .fillMaxWidth()
-              .height(6.dp)
-              .clip(RoundedCornerShape(3.dp))
+    Text(
+      text = stringResource(R.string.stats_mal_breakdown_title),
+      style = MaterialTheme.typography.titleMedium,
+      color = TextPrimary
+    )
+    statuses.forEach { (key, labelRes) ->
+      val count = breakdown[key] ?: 0
+      val fraction = (count.toFloat() / totalCount.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f)
+      Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+          Text(
+            text = stringResource(labelRes),
+            style = MaterialTheme.typography.labelSmall,
+            color = SecondaryGray
+          )
+          Text(
+            text = count.toString(),
+            style = MaterialTheme.typography.labelSmall,
+            color = if (count > 0) TextPrimary else SecondaryGray
           )
         }
+        LinearProgressIndicator(
+          progress = { fraction },
+          color = VlcOrange,
+          trackColor = ObsidianSurfaceElevated,
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(5.dp)
+            .clip(RoundedCornerShape(3.dp))
+        )
       }
     }
   }
@@ -531,49 +435,44 @@ private fun RecentHistoryRow(
   item: EpisodeWithAnime,
   onClick: () -> Unit
 ) {
-  Surface(
-    color = ObsidianSurfaceElevated,
-    shape = RoundedCornerShape(12.dp),
+  Row(
     modifier = Modifier
       .fillMaxWidth()
-      .clip(RoundedCornerShape(12.dp))
       .clickable(onClick = onClick)
+      .padding(vertical = 4.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(12.dp)
   ) {
-    Row(
-      modifier = Modifier.padding(10.dp),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-      VideoThumbnail(
-        uri = item.episode.fileUri,
-        contentDescription = stringResource(R.string.cd_anime_thumbnail, item.anime.title),
-        modifier = Modifier
-          .size(width = 76.dp, height = 46.dp)
-          .clip(RoundedCornerShape(8.dp)),
-        targetWidthPx = 240,
-        targetHeightPx = 150
+    VideoThumbnail(
+      uri = item.episode.fileUri,
+      contentDescription = stringResource(R.string.cd_anime_thumbnail, item.anime.title),
+      modifier = Modifier
+        .size(width = 80.dp, height = 48.dp)
+        .clip(AnimePlayRoleShapes.Poster),
+      targetWidthPx = 240,
+      targetHeightPx = 150
+    )
+    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+      Text(
+        text = item.anime.title,
+        style = MaterialTheme.typography.titleSmall,
+        color = TextPrimary,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
       )
-      Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(
-          text = item.anime.title,
-          style = MaterialTheme.typography.titleSmall,
-          color = MaterialTheme.colorScheme.onSurface,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis
-        )
-        Text(
-          text = "${stringResource(R.string.detail_episode_label, item.episode.number)} • ${
-            TimeFormatters.formatDuration(item.episode.lastPositionMs)
-          }",
-          style = MaterialTheme.typography.labelSmall,
-          color = SecondaryGray
-        )
-      }
-      Icon(
-        imageVector = Icons.Rounded.PlayArrow,
-        contentDescription = stringResource(R.string.player_play),
-        tint = VlcOrange
+      Text(
+        text = "${stringResource(R.string.detail_episode_label, item.episode.number)} • ${
+          TimeFormatters.formatDuration(item.episode.lastPositionMs)
+        }",
+        style = MaterialTheme.typography.labelSmall,
+        color = SecondaryGray
       )
     }
+    Icon(
+      imageVector = Icons.Rounded.PlayArrow,
+      contentDescription = stringResource(R.string.player_play),
+      tint = VlcOrange
+    )
   }
 }
+

@@ -4,9 +4,9 @@ import android.app.Activity
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,10 +30,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.BrightnessHigh
 import androidx.compose.material.icons.rounded.CreateNewFolder
 import androidx.compose.material.icons.rounded.FastForward
@@ -50,6 +48,7 @@ import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -67,8 +66,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -80,14 +77,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.data.scanner.MediaStoreScanner
+import com.example.ui.theme.AnimePlayRoleShapes
 import com.example.ui.theme.ObsidianBackground
 import com.example.ui.theme.ObsidianBorder
+import com.example.ui.theme.ObsidianDivider
 import com.example.ui.theme.ObsidianSurface
 import com.example.ui.theme.ObsidianSurfaceElevated
 import com.example.ui.theme.OnPrimaryBlack
 import com.example.ui.theme.SecondaryGray
+import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.VlcOrange
-import com.example.ui.theme.VlcOrangeSoft
 import com.example.util.scaleOnPress
 import kotlinx.coroutines.launch
 
@@ -199,16 +198,17 @@ fun WelcomeOnboardingScreen(
             contentScale = ContentScale.Crop,
             modifier = Modifier
               .size(32.dp)
-              .clip(RoundedCornerShape(8.dp))
+              .clip(AnimePlayRoleShapes.Poster)
           )
           Text(
             text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.titleMedium,
-            color = VlcOrange
+            color = TextPrimary
           )
         }
         TextButton(
           onClick = onComplete,
+          shape = AnimePlayRoleShapes.Button,
           modifier = Modifier.minimumInteractiveComponentSize()
         ) {
           Text(
@@ -235,50 +235,27 @@ fun WelcomeOnboardingScreen(
           verticalArrangement = Arrangement.Center
         ) {
           if (page.showHeroImage) {
-            Box(
+            Image(
+              painter = painterResource(id = R.drawable.img_welcome_hero),
+              contentDescription = stringResource(R.string.cd_welcome_illustration),
+              contentScale = ContentScale.Crop,
               modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(24.dp))
-                .border(1.dp, ObsidianBorder, RoundedCornerShape(24.dp))
-            ) {
-              Image(
-                painter = painterResource(id = R.drawable.img_welcome_hero),
-                contentDescription = stringResource(R.string.cd_welcome_illustration),
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-              )
-              Box(
-                modifier = Modifier
-                  .fillMaxSize()
-                  .background(
-                    Brush.verticalGradient(
-                      colors = listOf(Color.Transparent, ObsidianBackground.copy(alpha = 0.65f))
-                    )
-                  )
-              )
-            }
+                .clip(AnimePlayRoleShapes.Poster)
+            )
           } else {
             Surface(
               color = ObsidianSurface,
               shape = CircleShape,
-              modifier = Modifier
-                .size(120.dp)
-                .border(2.dp, VlcOrange.copy(alpha = 0.5f), CircleShape)
+              modifier = Modifier.size(112.dp)
             ) {
-              Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.background(
-                  Brush.radialGradient(
-                    colors = listOf(VlcOrangeSoft, ObsidianSurface)
-                  )
-                )
-              ) {
+              Box(contentAlignment = Alignment.Center) {
                 Icon(
                   imageVector = page.icon,
                   contentDescription = null,
-                  tint = VlcOrange,
-                  modifier = Modifier.size(54.dp)
+                  tint = TextPrimary,
+                  modifier = Modifier.size(48.dp)
                 )
               }
             }
@@ -289,7 +266,7 @@ fun WelcomeOnboardingScreen(
           Text(
             text = stringResource(page.titleRes),
             style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
+            color = TextPrimary,
             textAlign = TextAlign.Center
           )
 
@@ -309,7 +286,8 @@ fun WelcomeOnboardingScreen(
             OutlinedButton(
               onClick = { folderPickerLauncher.launch(null) },
               interactionSource = folderInteraction,
-              shape = RoundedCornerShape(14.dp),
+              shape = AnimePlayRoleShapes.Button,
+              border = BorderStroke(1.dp, ObsidianBorder),
               modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)
@@ -319,13 +297,13 @@ fun WelcomeOnboardingScreen(
               Icon(
                 imageVector = Icons.Rounded.CreateNewFolder,
                 contentDescription = null,
-                tint = VlcOrange,
+                tint = TextPrimary,
                 modifier = Modifier.size(20.dp)
               )
               Spacer(modifier = Modifier.width(8.dp))
               Text(
                 text = stringResource(R.string.onboarding_pick_folder_cta),
-                color = VlcOrange,
+                color = TextPrimary,
                 style = MaterialTheme.typography.labelLarge
               )
             }
@@ -343,7 +321,8 @@ fun WelcomeOnboardingScreen(
                     }
                   },
                   interactionSource = sdInteraction,
-                  shape = RoundedCornerShape(14.dp),
+                  shape = AnimePlayRoleShapes.Button,
+                  border = BorderStroke(1.dp, ObsidianBorder),
                   modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 6.dp)
@@ -354,13 +333,13 @@ fun WelcomeOnboardingScreen(
                   Icon(
                     imageVector = Icons.Rounded.SdCard,
                     contentDescription = null,
-                    tint = VlcOrange,
+                    tint = TextPrimary,
                     modifier = Modifier.size(18.dp)
                   )
                   Spacer(modifier = Modifier.width(8.dp))
                   Text(
                     text = stringResource(R.string.settings_pick_sd_card, volume.label),
-                    color = VlcOrange,
+                    color = TextPrimary,
                     style = MaterialTheme.typography.labelLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -372,7 +351,6 @@ fun WelcomeOnboardingScreen(
         }
       }
 
-      // Pager indicators
       Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.padding(bottom = 18.dp)
@@ -403,10 +381,10 @@ fun WelcomeOnboardingScreen(
         },
         interactionSource = ctaInteraction,
         colors = ButtonDefaults.buttonColors(
-          containerColor = VlcOrange,
+          containerColor = TextPrimary,
           contentColor = OnPrimaryBlack
         ),
-        shape = RoundedCornerShape(16.dp),
+        shape = AnimePlayRoleShapes.Button,
         modifier = Modifier
           .fillMaxWidth()
           .widthIn(max = 540.dp)
@@ -436,7 +414,7 @@ fun UserGuideScreen(
       TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
           containerColor = ObsidianBackground,
-          titleContentColor = MaterialTheme.colorScheme.onBackground
+          titleContentColor = TextPrimary
         ),
         navigationIcon = {
           IconButton(
@@ -461,8 +439,8 @@ fun UserGuideScreen(
     }
   ) { innerPadding ->
     LazyColumn(
-      contentPadding = PaddingValues(16.dp),
-      verticalArrangement = Arrangement.spacedBy(14.dp),
+      contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
+      verticalArrangement = Arrangement.spacedBy(24.dp),
       modifier = Modifier
         .fillMaxSize()
         .padding(innerPadding)
@@ -470,86 +448,69 @@ fun UserGuideScreen(
         .testTag("user_guide_list")
     ) {
       item {
-        Surface(
-          color = ObsidianSurface,
-          shape = RoundedCornerShape(18.dp),
-          modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, ObsidianBorder, RoundedCornerShape(18.dp))
-        ) {
-          Column {
-            Image(
-              painter = painterResource(id = R.drawable.img_welcome_hero),
-              contentDescription = stringResource(R.string.cd_welcome_illustration),
-              contentScale = ContentScale.Crop,
-              modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(16f / 9f)
-            )
-            Column(
-              modifier = Modifier.padding(16.dp),
-              verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-              Text(
-                text = stringResource(R.string.onboarding_page1_title),
-                style = MaterialTheme.typography.titleLarge,
-                color = VlcOrange
-              )
-              Text(
-                text = stringResource(R.string.onboarding_page1_body),
-                style = MaterialTheme.typography.bodyMedium,
-                color = SecondaryGray
-              )
-            }
-          }
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+          Image(
+            painter = painterResource(id = R.drawable.img_welcome_hero),
+            contentDescription = stringResource(R.string.cd_welcome_illustration),
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+              .fillMaxWidth()
+              .aspectRatio(16f / 9f)
+              .clip(AnimePlayRoleShapes.Poster)
+          )
+          Text(
+            text = stringResource(R.string.onboarding_page1_title),
+            style = MaterialTheme.typography.titleLarge,
+            color = TextPrimary
+          )
+          Text(
+            text = stringResource(R.string.onboarding_page1_body),
+            style = MaterialTheme.typography.bodyMedium,
+            color = SecondaryGray
+          )
         }
       }
 
+      item { HorizontalDivider(color = ObsidianDivider) }
+
       item {
-        GuideCard(
+        GuideSection(
           icon = Icons.Rounded.FolderOpen,
           title = stringResource(R.string.guide_naming_title),
           body = stringResource(R.string.guide_naming_body)
         )
       }
 
+      item { HorizontalDivider(color = ObsidianDivider) }
+
       item {
-        Surface(
-          color = ObsidianSurface,
-          shape = RoundedCornerShape(18.dp),
-          modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, ObsidianBorder, RoundedCornerShape(18.dp))
-        ) {
-          Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
           ) {
-            Row(
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-              Icon(
-                imageVector = Icons.Rounded.TouchApp,
-                contentDescription = null,
-                tint = VlcOrange
-              )
-              Text(
-                text = stringResource(R.string.guide_gestures_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
-              )
-            }
-            GuideBullet(Icons.Rounded.BrightnessHigh, stringResource(R.string.guide_gesture_left))
-            GuideBullet(Icons.Rounded.VolumeUp, stringResource(R.string.guide_gesture_right))
-            GuideBullet(Icons.Rounded.FastForward, stringResource(R.string.guide_gesture_double))
-            GuideBullet(Icons.Rounded.Lock, stringResource(R.string.guide_gesture_lock))
+            Icon(
+              imageVector = Icons.Rounded.TouchApp,
+              contentDescription = null,
+              tint = TextPrimary
+            )
+            Text(
+              text = stringResource(R.string.guide_gestures_title),
+              style = MaterialTheme.typography.titleMedium,
+              color = TextPrimary
+            )
           }
+          GuideBullet(Icons.Rounded.BrightnessHigh, stringResource(R.string.guide_gesture_left))
+          GuideBullet(Icons.Rounded.VolumeUp, stringResource(R.string.guide_gesture_right))
+          GuideBullet(Icons.Rounded.FastForward, stringResource(R.string.guide_gesture_double))
+          GuideBullet(Icons.Rounded.Lock, stringResource(R.string.guide_gesture_lock))
         }
       }
 
+      item { HorizontalDivider(color = ObsidianDivider) }
+
       item {
-        GuideCard(
+        GuideSection(
           icon = Icons.Rounded.Star,
           title = stringResource(R.string.guide_mal_title),
           body = stringResource(R.string.guide_mal_body)
@@ -561,7 +522,8 @@ fun UserGuideScreen(
         OutlinedButton(
           onClick = onReplayWelcome,
           interactionSource = replayInteraction,
-          shape = RoundedCornerShape(14.dp),
+          shape = AnimePlayRoleShapes.Button,
+          border = BorderStroke(1.dp, ObsidianBorder),
           modifier = Modifier
             .fillMaxWidth()
             .height(50.dp)
@@ -570,13 +532,13 @@ fun UserGuideScreen(
           Icon(
             imageVector = Icons.Rounded.Replay,
             contentDescription = null,
-            tint = VlcOrange,
+            tint = TextPrimary,
             modifier = Modifier.size(18.dp)
           )
           Spacer(modifier = Modifier.width(8.dp))
           Text(
             text = stringResource(R.string.guide_replay_welcome),
-            color = VlcOrange,
+            color = TextPrimary,
             style = MaterialTheme.typography.labelLarge
           )
         }
@@ -586,39 +548,28 @@ fun UserGuideScreen(
 }
 
 @Composable
-private fun GuideCard(
+private fun GuideSection(
   icon: ImageVector,
   title: String,
   body: String
 ) {
-  Surface(
-    color = ObsidianSurface,
-    shape = RoundedCornerShape(18.dp),
-    modifier = Modifier
-      .fillMaxWidth()
-      .border(1.dp, ObsidianBorder, RoundedCornerShape(18.dp))
-  ) {
-    Column(
-      modifier = Modifier.padding(16.dp),
-      verticalArrangement = Arrangement.spacedBy(8.dp)
+  Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-      ) {
-        Icon(imageVector = icon, contentDescription = null, tint = VlcOrange)
-        Text(
-          text = title,
-          style = MaterialTheme.typography.titleMedium,
-          color = MaterialTheme.colorScheme.onSurface
-        )
-      }
+      Icon(imageVector = icon, contentDescription = null, tint = TextPrimary)
       Text(
-        text = body,
-        style = MaterialTheme.typography.bodyMedium,
-        color = SecondaryGray
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        color = TextPrimary
       )
     }
+    Text(
+      text = body,
+      style = MaterialTheme.typography.bodyMedium,
+      color = SecondaryGray
+    )
   }
 }
 
@@ -629,20 +580,18 @@ private fun GuideBullet(icon: ImageVector, text: String) {
     horizontalArrangement = Arrangement.spacedBy(10.dp),
     modifier = Modifier
       .fillMaxWidth()
-      .clip(RoundedCornerShape(10.dp))
-      .background(ObsidianSurfaceElevated)
-      .padding(horizontal = 12.dp, vertical = 10.dp)
+      .padding(vertical = 4.dp)
   ) {
     Icon(
       imageVector = icon,
       contentDescription = null,
-      tint = VlcOrange,
+      tint = SecondaryGray,
       modifier = Modifier.size(18.dp)
     )
     Text(
       text = text,
-      style = MaterialTheme.typography.bodySmall,
-      color = MaterialTheme.colorScheme.onSurface
+      style = MaterialTheme.typography.bodyMedium,
+      color = TextPrimary
     )
   }
 }

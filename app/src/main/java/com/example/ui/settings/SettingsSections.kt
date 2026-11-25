@@ -1,21 +1,17 @@
 package com.example.ui.settings
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -26,11 +22,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.data.preferences.AppSettings
+import com.example.ui.theme.AnimePlayRoleShapes
 import com.example.ui.theme.ObsidianBorder
-import com.example.ui.theme.ObsidianSurface
+import com.example.ui.theme.ObsidianDivider
 import com.example.ui.theme.ObsidianSurfaceElevated
 import com.example.ui.theme.OnPrimaryBlack
 import com.example.ui.theme.SecondaryGray
+import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.VlcOrange
 import com.example.util.EqualizerPresets
 import kotlin.math.roundToInt
@@ -40,24 +38,16 @@ fun SettingsSectionCard(
   title: String,
   content: @Composable () -> Unit
 ) {
-  Surface(
-    color = ObsidianSurface,
-    shape = RoundedCornerShape(18.dp),
-    modifier = Modifier
-      .fillMaxWidth()
-      .border(1.dp, ObsidianBorder, RoundedCornerShape(18.dp))
+  Column(
+    modifier = Modifier.fillMaxWidth(),
+    verticalArrangement = Arrangement.spacedBy(12.dp)
   ) {
-    Column(
-      modifier = Modifier.padding(16.dp),
-      verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-      Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        color = VlcOrange
-      )
-      content()
-    }
+    Text(
+      text = title,
+      style = MaterialTheme.typography.titleMedium,
+      color = TextPrimary
+    )
+    content()
   }
 }
 
@@ -77,7 +67,7 @@ fun SettingsToggleRow(
       Text(
         text = title,
         style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurface
+        color = TextPrimary
       )
       Text(
         text = subtitle,
@@ -110,19 +100,27 @@ fun <T> SettingsChipGroup(
     Text(
       text = title,
       style = MaterialTheme.typography.bodyMedium,
-      color = MaterialTheme.colorScheme.onSurface
+      color = TextPrimary
     )
     FlowRow(
       modifier = Modifier.fillMaxWidth(),
       horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
       options.forEach { (value, label) ->
+        val isSelected = selectedValue == value
         FilterChip(
-          selected = selectedValue == value,
+          selected = isSelected,
           onClick = { onSelect(value) },
+          shape = AnimePlayRoleShapes.Chip,
+          border = FilterChipDefaults.filterChipBorder(
+            enabled = true,
+            selected = isSelected,
+            borderColor = ObsidianBorder,
+            selectedBorderColor = TextPrimary
+          ),
           label = { Text(text = label, style = MaterialTheme.typography.labelSmall) },
           colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = VlcOrange,
+            selectedContainerColor = TextPrimary,
             selectedLabelColor = OnPrimaryBlack,
             containerColor = ObsidianSurfaceElevated,
             labelColor = SecondaryGray
@@ -150,7 +148,7 @@ fun VlcVideoSettingsSection(
       onSelect = viewModel::setHardwareAccelerationMode
     )
 
-    HorizontalDivider(color = ObsidianBorder)
+    HorizontalDivider(color = ObsidianDivider)
 
     SettingsChipGroup(
       title = stringResource(R.string.settings_aspect_ratio),
@@ -165,7 +163,7 @@ fun VlcVideoSettingsSection(
       onSelect = viewModel::setDefaultAspectRatio
     )
 
-    HorizontalDivider(color = ObsidianBorder)
+    HorizontalDivider(color = ObsidianDivider)
 
     SettingsChipGroup(
       title = stringResource(R.string.settings_orientation),
@@ -178,7 +176,7 @@ fun VlcVideoSettingsSection(
       onSelect = viewModel::setPlayerOrientationMode
     )
 
-    HorizontalDivider(color = ObsidianBorder)
+    HorizontalDivider(color = ObsidianDivider)
 
     SettingsToggleRow(
       title = stringResource(R.string.settings_pip_title),
@@ -187,7 +185,7 @@ fun VlcVideoSettingsSection(
       onCheckedChange = viewModel::setEnablePictureInPicture
     )
 
-    HorizontalDivider(color = ObsidianBorder)
+    HorizontalDivider(color = ObsidianDivider)
 
     SettingsToggleRow(
       title = stringResource(R.string.settings_keep_screen_on),
@@ -196,7 +194,7 @@ fun VlcVideoSettingsSection(
       onCheckedChange = viewModel::setKeepScreenOn
     )
 
-    HorizontalDivider(color = ObsidianBorder)
+    HorizontalDivider(color = ObsidianDivider)
 
     SettingsToggleRow(
       title = stringResource(R.string.settings_pinch_zoom),
@@ -205,13 +203,13 @@ fun VlcVideoSettingsSection(
       onCheckedChange = viewModel::setEnablePinchZoom
     )
 
-    HorizontalDivider(color = ObsidianBorder)
+    HorizontalDivider(color = ObsidianDivider)
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
       Text(
         text = stringResource(R.string.player_night_dimmer_title, settings.nightDimmerPercent),
         style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurface
+        color = TextPrimary
       )
       Slider(
         value = settings.nightDimmerPercent.toFloat(),
@@ -246,16 +244,16 @@ fun VlcAudioSettingsSection(
     Text(
       text = stringResource(EqualizerPresets.findByKey(settings.audioEqualizerPreset).descriptionRes),
       style = MaterialTheme.typography.bodySmall,
-      color = VlcOrange
+      color = SecondaryGray
     )
 
-    HorizontalDivider(color = ObsidianBorder)
+    HorizontalDivider(color = ObsidianDivider)
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
       Text(
         text = stringResource(R.string.settings_audio_boost, settings.audioBoostPercent),
         style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurface
+        color = TextPrimary
       )
       Slider(
         value = settings.audioBoostPercent.toFloat(),
@@ -270,7 +268,7 @@ fun VlcAudioSettingsSection(
       )
     }
 
-    HorizontalDivider(color = ObsidianBorder)
+    HorizontalDivider(color = ObsidianDivider)
 
     SettingsToggleRow(
       title = stringResource(R.string.settings_skip_silence),
@@ -279,7 +277,7 @@ fun VlcAudioSettingsSection(
       onCheckedChange = viewModel::setSkipSilence
     )
 
-    HorizontalDivider(color = ObsidianBorder)
+    HorizontalDivider(color = ObsidianDivider)
 
     SettingsToggleRow(
       title = stringResource(R.string.settings_background_audio),
@@ -288,7 +286,7 @@ fun VlcAudioSettingsSection(
       onCheckedChange = viewModel::setBackgroundAudioPlay
     )
 
-    HorizontalDivider(color = ObsidianBorder)
+    HorizontalDivider(color = ObsidianDivider)
 
     SettingsChipGroup(
       title = stringResource(R.string.settings_preferred_audio),
@@ -317,7 +315,7 @@ fun VlcSubtitleSettingsSection(
       onCheckedChange = viewModel::setAutoEnableSubtitles
     )
 
-    HorizontalDivider(color = ObsidianBorder)
+    HorizontalDivider(color = ObsidianDivider)
 
     SettingsChipGroup(
       title = stringResource(R.string.settings_subtitle_size),
@@ -331,7 +329,7 @@ fun VlcSubtitleSettingsSection(
       onSelect = viewModel::setSubtitleFontSizeSp
     )
 
-    HorizontalDivider(color = ObsidianBorder)
+    HorizontalDivider(color = ObsidianDivider)
 
     SettingsChipGroup(
       title = stringResource(R.string.settings_subtitle_color),
@@ -345,7 +343,7 @@ fun VlcSubtitleSettingsSection(
       onSelect = viewModel::setSubtitleColorPreset
     )
 
-    HorizontalDivider(color = ObsidianBorder)
+    HorizontalDivider(color = ObsidianDivider)
 
     SettingsToggleRow(
       title = stringResource(R.string.settings_subtitle_bg),
@@ -354,14 +352,14 @@ fun VlcSubtitleSettingsSection(
       onCheckedChange = viewModel::setSubtitleBackgroundBox
     )
 
-    HorizontalDivider(color = ObsidianBorder)
+    HorizontalDivider(color = ObsidianDivider)
 
     val delayPrefix = if (settings.subtitleDelayMs > 0) "+" else ""
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
       Text(
         text = stringResource(R.string.player_sub_delay_title, "$delayPrefix${settings.subtitleDelayMs}"),
         style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurface
+        color = TextPrimary
       )
       Slider(
         value = settings.subtitleDelayMs.toFloat(),

@@ -6,8 +6,8 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,15 +35,12 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.rounded.AutoFixHigh
-import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Edit
@@ -61,6 +59,7 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -68,7 +67,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -82,7 +80,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -97,14 +94,17 @@ import com.example.data.local.entity.EpisodeEntity
 import com.example.data.local.entity.PlaylistSummary
 import com.example.data.remote.MalAnimeCandidate
 import com.example.ui.components.VideoThumbnail
+import com.example.ui.components.rememberClampedDominantColor
+import com.example.ui.theme.AnimePlayRoleShapes
 import com.example.ui.theme.ObsidianBackground
 import com.example.ui.theme.ObsidianBorder
+import com.example.ui.theme.ObsidianDivider
 import com.example.ui.theme.ObsidianSurface
 import com.example.ui.theme.ObsidianSurfaceElevated
 import com.example.ui.theme.OnPrimaryBlack
 import com.example.ui.theme.SecondaryGray
+import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.VlcOrange
-import com.example.ui.theme.VlcOrangeSoft
 import com.example.util.TimeFormatters
 import com.example.util.scaleOnPress
 import kotlinx.coroutines.launch
@@ -130,52 +130,35 @@ fun DetailScreen(
   }
 
   val anime = state.anime
+  val headerTint = rememberClampedDominantColor(
+    imageUri = anime?.effectiveCoverUri,
+    fallbackColor = ObsidianSurface
+  )
 
   Scaffold(
     containerColor = ObsidianBackground,
     contentWindowInsets = WindowInsets(0)
   ) { innerPadding ->
     LazyColumn(
-      contentPadding = PaddingValues(bottom = 28.dp),
+      contentPadding = PaddingValues(bottom = 32.dp),
       modifier = Modifier
         .fillMaxSize()
         .padding(innerPadding)
         .windowInsetsPadding(WindowInsets.navigationBars)
         .testTag("detail_episode_list")
     ) {
+      // Palette-tinted header (no gradient decoration)
       item {
-        Box(
+        Column(
           modifier = Modifier
             .fillMaxWidth()
-            .height(290.dp)
+            .background(headerTint)
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 20.dp),
+          verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-          VideoThumbnail(
-            uri = anime?.effectiveCoverUri,
-            contentDescription = stringResource(R.string.cd_anime_thumbnail, anime?.title.orEmpty()),
-            modifier = Modifier.fillMaxSize(),
-            targetWidthPx = 720,
-            targetHeightPx = 440
-          )
-          Box(
-            modifier = Modifier
-              .fillMaxSize()
-              .background(
-                Brush.verticalGradient(
-                  colors = listOf(
-                    ObsidianBackground.copy(alpha = 0.55f),
-                    ObsidianBackground.copy(alpha = 0.28f),
-                    ObsidianBackground
-                  )
-                )
-              )
-          )
-
           Row(
-            modifier = Modifier
-              .align(Alignment.TopCenter)
-              .fillMaxWidth()
-              .windowInsetsPadding(WindowInsets.statusBars)
-              .padding(12.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
@@ -184,13 +167,13 @@ fun DetailScreen(
               modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(ObsidianBackground.copy(alpha = 0.65f))
+                .background(Color.Black.copy(alpha = 0.35f))
                 .testTag("detail_back_button")
             ) {
               Icon(
                 imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                 contentDescription = stringResource(R.string.action_back),
-                tint = MaterialTheme.colorScheme.onBackground
+                tint = TextPrimary
               )
             }
 
@@ -200,7 +183,7 @@ fun DetailScreen(
                 modifier = Modifier
                   .size(48.dp)
                   .clip(CircleShape)
-                  .background(ObsidianBackground.copy(alpha = 0.65f))
+                  .background(Color.Black.copy(alpha = 0.35f))
                   .testTag("detail_favorite_button")
               ) {
                 Icon(
@@ -208,81 +191,99 @@ fun DetailScreen(
                   contentDescription = stringResource(
                     if (anime.isFavorite) R.string.detail_favorite_remove else R.string.detail_favorite_add
                   ),
-                  tint = if (anime.isFavorite) VlcOrange else MaterialTheme.colorScheme.onBackground
+                  tint = if (anime.isFavorite) VlcOrange else TextPrimary
                 )
               }
             }
           }
 
-          Column(
-            modifier = Modifier
-              .align(Alignment.BottomStart)
-              .fillMaxWidth()
-              .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.Bottom
           ) {
-            Text(
-              text = anime?.title.orEmpty(),
-              style = MaterialTheme.typography.headlineMedium,
-              color = MaterialTheme.colorScheme.onBackground,
-              maxLines = 2,
-              overflow = TextOverflow.Ellipsis
+            VideoThumbnail(
+              uri = anime?.effectiveCoverUri,
+              contentDescription = stringResource(R.string.cd_anime_thumbnail, anime?.title.orEmpty()),
+              modifier = Modifier
+                .width(104.dp)
+                .aspectRatio(2f / 3f)
+                .clip(AnimePlayRoleShapes.Poster),
+              targetWidthPx = 300,
+              targetHeightPx = 450
             )
 
-            FlowRow(
-              horizontalArrangement = Arrangement.spacedBy(8.dp),
-              verticalArrangement = Arrangement.spacedBy(6.dp)
+            Column(
+              modifier = Modifier.weight(1f),
+              verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+              Text(
+                text = anime?.title.orEmpty(),
+                style = MaterialTheme.typography.headlineMedium,
+                color = TextPrimary,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+              )
+
               val watchedCount = state.episodes.count { it.isWatched }
-              MetaBadge(text = stringResource(R.string.home_episode_count, state.episodes.size))
-              MetaBadge(text = stringResource(R.string.home_watched_progress, watchedCount, state.episodes.size))
+              Text(
+                text = "${stringResource(R.string.home_episode_count, state.episodes.size)} • ${
+                  stringResource(R.string.home_watched_progress, watchedCount, state.episodes.size)
+                }",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextPrimary.copy(alpha = 0.86f)
+              )
+
               anime?.let { item ->
                 val dateText = item.releaseDate.ifBlank { item.releaseYear?.toString().orEmpty() }
                 val genreAndDate = buildString {
                   append(item.genre)
                   if (dateText.isNotBlank()) append(" • $dateText")
                 }
-                MetaBadge(text = genreAndDate)
+                Text(
+                  text = genreAndDate,
+                  style = MaterialTheme.typography.bodySmall,
+                  color = SecondaryGray,
+                  maxLines = 2,
+                  overflow = TextOverflow.Ellipsis
+                )
 
-                item.malScore?.let { score ->
-                  Surface(
-                    color = VlcOrangeSoft,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.border(1.dp, VlcOrange.copy(alpha = 0.45f), RoundedCornerShape(8.dp))
-                  ) {
+                FlowRow(
+                  horizontalArrangement = Arrangement.spacedBy(8.dp),
+                  verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                  item.malScore?.let { score ->
                     Text(
                       text = stringResource(R.string.mal_score_badge, score),
                       style = MaterialTheme.typography.labelSmall,
-                      color = VlcOrange,
-                      modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                      color = TextPrimary,
+                      modifier = Modifier
+                        .background(Color.Black.copy(alpha = 0.35f), AnimePlayRoleShapes.Chip)
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
                     )
                   }
-                }
-              }
-              Surface(
-                color = ObsidianSurfaceElevated.copy(alpha = 0.92f),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier
-                  .clip(RoundedCornerShape(8.dp))
-                  .clickable { showEditDialog = true }
-                  .testTag("detail_edit_button")
-              ) {
-                Row(
-                  modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                  verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                  Icon(
-                    imageVector = Icons.Rounded.Edit,
-                    contentDescription = stringResource(R.string.detail_edit_info),
-                    tint = VlcOrange,
-                    modifier = Modifier.size(13.dp)
-                  )
-                  Text(
-                    text = stringResource(R.string.detail_edit_info),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = VlcOrange
-                  )
+                  Row(
+                    modifier = Modifier
+                      .clip(AnimePlayRoleShapes.Chip)
+                      .background(Color.Black.copy(alpha = 0.35f))
+                      .clickable { showEditDialog = true }
+                      .padding(horizontal = 10.dp, vertical = 5.dp)
+                      .testTag("detail_edit_button"),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                  ) {
+                    Icon(
+                      imageVector = Icons.Rounded.Edit,
+                      contentDescription = stringResource(R.string.detail_edit_info),
+                      tint = TextPrimary,
+                      modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                      text = stringResource(R.string.detail_edit_info),
+                      style = MaterialTheme.typography.labelSmall,
+                      color = TextPrimary
+                    )
+                  }
                 }
               }
             }
@@ -290,178 +291,179 @@ fun DetailScreen(
         }
       }
 
-      // Primary Play CTA + Synopsis + MyAnimeList Tracking Card
+      // Primary Play CTA + Secondary Action Buttons + Sections separated by spacing & dividers
       item {
-        val nextEp = state.nextToPlayEpisode
-        if (nextEp != null) {
-          val playInteraction = remember { MutableInteractionSource() }
-          Button(
-            onClick = { onEpisodeClick(nextEp.id, -1L) },
-            interactionSource = playInteraction,
-            colors = ButtonDefaults.buttonColors(
-              containerColor = VlcOrange,
-              contentColor = OnPrimaryBlack
-            ),
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(horizontal = 16.dp, vertical = 8.dp)
-              .height(50.dp)
-              .scaleOnPress(playInteraction)
-              .testTag("detail_primary_play_button")
-          ) {
-            Icon(
-              imageVector = Icons.Rounded.PlayArrow,
-              contentDescription = null,
-              modifier = Modifier.size(22.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-              text = if (nextEp.lastPositionMs > 0L && !nextEp.isWatched) {
-                stringResource(R.string.detail_continue_episode, nextEp.number)
-              } else {
-                stringResource(R.string.detail_play_now)
-              },
-              style = MaterialTheme.typography.labelLarge
-            )
-          }
-        }
-
-        if (anime != null) {
-          val statusLabel = when (anime.malStatus) {
-            "completed" -> stringResource(R.string.mal_status_completed)
-            "on_hold" -> stringResource(R.string.mal_status_on_hold)
-            "dropped" -> stringResource(R.string.mal_status_dropped)
-            "plan_to_watch" -> stringResource(R.string.mal_status_plan)
-            else -> stringResource(R.string.mal_status_watching)
-          }
-          val shareText = stringResource(
-            R.string.detail_share_text,
-            anime.title,
-            state.episodes.size,
-            statusLabel
-          )
-          val shareChooserTitle = stringResource(R.string.detail_share_anime)
-
-          Row(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(horizontal = 16.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-          ) {
-            OutlinedButton(
-              onClick = { viewModel.scanAllEpisodesIntroOutro() },
-              enabled = !state.isScanningIntroOutro,
-              shape = RoundedCornerShape(12.dp),
-              contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
-              modifier = Modifier
-                .weight(1.35f)
-                .height(48.dp)
-                .testTag("detail_scan_intro_outro_button")
-            ) {
-              if (state.isScanningIntroOutro) {
-                CircularProgressIndicator(
-                  color = VlcOrange,
-                  strokeWidth = 2.dp,
-                  modifier = Modifier.size(16.dp)
-                )
-              } else {
+        Column(
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 20.dp),
+          verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+          val nextEp = state.nextToPlayEpisode
+          Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (nextEp != null) {
+              val playInteraction = remember { MutableInteractionSource() }
+              Button(
+                onClick = { onEpisodeClick(nextEp.id, -1L) },
+                interactionSource = playInteraction,
+                colors = ButtonDefaults.buttonColors(
+                  containerColor = VlcOrange,
+                  contentColor = OnPrimaryBlack
+                ),
+                shape = AnimePlayRoleShapes.Button,
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .height(50.dp)
+                  .scaleOnPress(playInteraction)
+                  .testTag("detail_primary_play_button")
+              ) {
                 Icon(
-                  imageVector = Icons.Rounded.AutoFixHigh,
+                  imageVector = Icons.Rounded.PlayArrow,
                   contentDescription = null,
-                  tint = VlcOrange,
-                  modifier = Modifier.size(16.dp)
+                  modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                  text = if (nextEp.lastPositionMs > 0L && !nextEp.isWatched) {
+                    stringResource(R.string.detail_continue_episode, nextEp.number)
+                  } else {
+                    stringResource(R.string.detail_play_now)
+                  },
+                  style = MaterialTheme.typography.labelLarge
                 )
               }
-              Spacer(modifier = Modifier.width(6.dp))
-              Text(
-                text = stringResource(R.string.detail_scan_intro_outro),
-                style = MaterialTheme.typography.labelMedium,
-                color = VlcOrange,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-              )
             }
 
-            OutlinedButton(
-              onClick = { showPlaylistDialog = true },
-              shape = RoundedCornerShape(12.dp),
-              contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
-              modifier = Modifier
-                .weight(0.9f)
-                .height(48.dp)
-                .testTag("detail_playlist_button")
-            ) {
-              Icon(
-                imageVector = Icons.AutoMirrored.Rounded.PlaylistAdd,
-                contentDescription = null,
-                tint = VlcOrange,
-                modifier = Modifier.size(17.dp)
+            if (anime != null) {
+              val statusLabel = when (anime.malStatus) {
+                "completed" -> stringResource(R.string.mal_status_completed)
+                "on_hold" -> stringResource(R.string.mal_status_on_hold)
+                "dropped" -> stringResource(R.string.mal_status_dropped)
+                "plan_to_watch" -> stringResource(R.string.mal_status_plan)
+                else -> stringResource(R.string.mal_status_watching)
+              }
+              val shareText = stringResource(
+                R.string.detail_share_text,
+                anime.title,
+                state.episodes.size,
+                statusLabel
               )
-              Spacer(modifier = Modifier.width(4.dp))
-              Text(
-                text = stringResource(R.string.detail_add_to_playlist),
-                style = MaterialTheme.typography.labelMedium,
-                color = VlcOrange,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-              )
-            }
+              val shareChooserTitle = stringResource(R.string.detail_share_anime)
 
-            OutlinedButton(
-              onClick = {
-                val intent = Intent(Intent.ACTION_SEND).apply {
-                  type = "text/plain"
-                  putExtra(Intent.EXTRA_TEXT, shareText)
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+              ) {
+                OutlinedButton(
+                  onClick = { viewModel.scanAllEpisodesIntroOutro() },
+                  enabled = !state.isScanningIntroOutro,
+                  shape = AnimePlayRoleShapes.Button,
+                  border = BorderStroke(1.dp, ObsidianBorder),
+                  contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                  modifier = Modifier
+                    .weight(1.35f)
+                    .height(48.dp)
+                    .testTag("detail_scan_intro_outro_button")
+                ) {
+                  if (state.isScanningIntroOutro) {
+                    CircularProgressIndicator(
+                      color = VlcOrange,
+                      strokeWidth = 2.dp,
+                      modifier = Modifier.size(16.dp)
+                    )
+                  } else {
+                    Icon(
+                      imageVector = Icons.Rounded.AutoFixHigh,
+                      contentDescription = null,
+                      tint = TextPrimary,
+                      modifier = Modifier.size(16.dp)
+                    )
+                  }
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text(
+                    text = stringResource(R.string.detail_scan_intro_outro),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                  )
                 }
-                context.startActivity(Intent.createChooser(intent, shareChooserTitle))
-              },
-              shape = RoundedCornerShape(12.dp),
-              contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
-              modifier = Modifier
-                .weight(0.85f)
-                .height(48.dp)
-                .testTag("detail_share_button")
-            ) {
-              Icon(
-                imageVector = Icons.Rounded.Share,
-                contentDescription = null,
-                tint = VlcOrange,
-                modifier = Modifier.size(16.dp)
-              )
-              Spacer(modifier = Modifier.width(4.dp))
-              Text(
-                text = stringResource(R.string.detail_share_anime),
-                style = MaterialTheme.typography.labelMedium,
-                color = VlcOrange,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-              )
+
+                OutlinedButton(
+                  onClick = { showPlaylistDialog = true },
+                  shape = AnimePlayRoleShapes.Button,
+                  border = BorderStroke(1.dp, ObsidianBorder),
+                  contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                  modifier = Modifier
+                    .weight(0.95f)
+                    .height(48.dp)
+                    .testTag("detail_playlist_button")
+                ) {
+                  Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.PlaylistAdd,
+                    contentDescription = null,
+                    tint = TextPrimary,
+                    modifier = Modifier.size(17.dp)
+                  )
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text(
+                    text = stringResource(R.string.detail_add_to_playlist),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                  )
+                }
+
+                OutlinedButton(
+                  onClick = {
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                      type = "text/plain"
+                      putExtra(Intent.EXTRA_TEXT, shareText)
+                    }
+                    context.startActivity(Intent.createChooser(intent, shareChooserTitle))
+                  },
+                  shape = AnimePlayRoleShapes.Button,
+                  border = BorderStroke(1.dp, ObsidianBorder),
+                  contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                  modifier = Modifier
+                    .weight(0.85f)
+                    .height(48.dp)
+                    .testTag("detail_share_button")
+                ) {
+                  Icon(
+                    imageVector = Icons.Rounded.Share,
+                    contentDescription = null,
+                    tint = TextPrimary,
+                    modifier = Modifier.size(16.dp)
+                  )
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text(
+                    text = stringResource(R.string.detail_share_anime),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                  )
+                }
+              }
             }
           }
 
-          // Synopsis card
-          Surface(
-            color = ObsidianSurface,
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(horizontal = 16.dp, vertical = 6.dp)
-              .border(1.dp, ObsidianBorder, RoundedCornerShape(16.dp))
-          ) {
-            Column(
-              modifier = Modifier.padding(14.dp),
-              verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
+          if (anime != null) {
+            HorizontalDivider(color = ObsidianDivider)
+
+            // Synopsis section (open layout, no box)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
               Text(
                 text = stringResource(R.string.detail_synopsis_label),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface
+                style = MaterialTheme.typography.titleMedium,
+                color = TextPrimary
               )
               if (anime.synopsis.isBlank()) {
                 Text(
                   text = stringResource(R.string.detail_synopsis_empty),
-                  style = MaterialTheme.typography.bodySmall,
+                  style = MaterialTheme.typography.bodyMedium,
                   color = SecondaryGray
                 )
               } else {
@@ -478,86 +480,66 @@ fun DetailScreen(
                       if (synopsisExpanded) R.string.detail_read_less else R.string.detail_read_more
                     ),
                     style = MaterialTheme.typography.labelMedium,
-                    color = VlcOrange,
+                    color = TextPrimary,
                     modifier = Modifier
-                      .clip(RoundedCornerShape(6.dp))
                       .clickable { synopsisExpanded = !synopsisExpanded }
-                      .padding(vertical = 2.dp)
+                      .padding(vertical = 4.dp)
                   )
                 }
               }
             }
-          }
 
-          // MyAnimeList Tracking card
-          MalTrackingSection(
-            anime = anime,
-            watchedEpisodes = state.episodes.count { it.isWatched },
-            totalEpisodes = state.episodes.size,
-            onSearchMalClick = {
-              showMalSearchDialog = true
-              viewModel.searchMyAnimeList(anime.title)
-            },
-            onOpenMalWeb = { malId ->
-              val intent = Intent(
-                Intent.ACTION_VIEW,
-                Uri.parse("https://myanimelist.net/anime/$malId")
-              )
-              context.startActivity(intent)
-            },
-            onUnlinkMal = { viewModel.unlinkMal() },
-            onSelectStatus = viewModel::updateMalStatus,
-            onSelectUserScore = viewModel::updateMalUserScore
-          )
-          if (state.bookmarks.isNotEmpty()) {
-            Surface(
-              color = ObsidianSurface,
-              shape = RoundedCornerShape(16.dp),
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp)
-                .border(1.dp, ObsidianBorder, RoundedCornerShape(16.dp))
-            ) {
-              Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-              ) {
-                Row(
-                  verticalAlignment = Alignment.CenterVertically,
-                  horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                  Icon(
-                    imageVector = Icons.Rounded.Bookmark,
-                    contentDescription = null,
-                    tint = VlcOrange,
-                    modifier = Modifier.size(18.dp)
-                  )
-                  Text(
-                    text = stringResource(R.string.detail_bookmarks_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                  )
-                }
+            HorizontalDivider(color = ObsidianDivider)
+
+            // MyAnimeList Tracking section
+            MalTrackingSection(
+              anime = anime,
+              watchedEpisodes = state.episodes.count { it.isWatched },
+              totalEpisodes = state.episodes.size,
+              onSearchMalClick = {
+                showMalSearchDialog = true
+                viewModel.searchMyAnimeList(anime.title)
+              },
+              onOpenMalWeb = { malId ->
+                val intent = Intent(
+                  Intent.ACTION_VIEW,
+                  Uri.parse("https://myanimelist.net/anime/$malId")
+                )
+                context.startActivity(intent)
+              },
+              onUnlinkMal = { viewModel.unlinkMal() },
+              onSelectStatus = viewModel::updateMalStatus,
+              onSelectUserScore = viewModel::updateMalUserScore
+            )
+
+            if (state.bookmarks.isNotEmpty()) {
+              HorizontalDivider(color = ObsidianDivider)
+              Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                  text = stringResource(R.string.detail_bookmarks_title),
+                  style = MaterialTheme.typography.titleMedium,
+                  color = TextPrimary
+                )
                 state.bookmarks.forEach { bm ->
                   Row(
                     modifier = Modifier
                       .fillMaxWidth()
-                      .clip(RoundedCornerShape(10.dp))
-                      .background(ObsidianSurfaceElevated)
                       .clickable { onEpisodeClick(bm.episodeId, bm.positionMs) }
-                      .padding(horizontal = 12.dp, vertical = 8.dp),
+                      .padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                   ) {
                     Text(
-                      text = "Ep ${bm.episodeNumber} • ${TimeFormatters.formatDuration(bm.positionMs)}",
+                      text = "${stringResource(R.string.detail_episode_label, bm.episodeNumber)} • ${
+                        TimeFormatters.formatDuration(bm.positionMs)
+                      }",
                       style = MaterialTheme.typography.labelMedium,
-                      color = VlcOrange
+                      color = TextPrimary
                     )
                     Text(
                       text = bm.label,
                       style = MaterialTheme.typography.bodySmall,
-                      color = MaterialTheme.colorScheme.onSurface,
+                      color = SecondaryGray,
                       maxLines = 1,
                       overflow = TextOverflow.Ellipsis,
                       modifier = Modifier.weight(1f)
@@ -578,14 +560,15 @@ fun DetailScreen(
               }
             }
           }
-        }
 
-        Text(
-          text = stringResource(R.string.detail_episode_list_title),
-          style = MaterialTheme.typography.titleMedium,
-          color = MaterialTheme.colorScheme.onBackground,
-          modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 8.dp)
-        )
+          HorizontalDivider(color = ObsidianDivider)
+
+          Text(
+            text = stringResource(R.string.detail_episode_list_title),
+            style = MaterialTheme.typography.titleMedium,
+            color = TextPrimary
+          )
+        }
       }
 
       if (state.episodes.isEmpty()) {
@@ -594,7 +577,7 @@ fun DetailScreen(
             text = stringResource(R.string.detail_no_episodes),
             style = MaterialTheme.typography.bodyMedium,
             color = SecondaryGray,
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(horizontal = 16.dp)
           )
         }
       } else {
@@ -670,162 +653,143 @@ private fun MalTrackingSection(
     "plan_to_watch" to stringResource(R.string.mal_status_plan)
   )
 
-  Surface(
-    color = ObsidianSurface,
-    shape = RoundedCornerShape(16.dp),
+  val neutralChipColors = FilterChipDefaults.filterChipColors(
+    selectedContainerColor = TextPrimary,
+    selectedLabelColor = OnPrimaryBlack,
+    selectedLeadingIconColor = OnPrimaryBlack,
+    containerColor = ObsidianSurfaceElevated,
+    labelColor = SecondaryGray,
+    iconColor = SecondaryGray
+  )
+  val neutralChipBorder = FilterChipDefaults.filterChipBorder(
+    enabled = true,
+    selected = false,
+    borderColor = Color.Transparent,
+    selectedBorderColor = Color.Transparent
+  )
+
+  Column(
     modifier = Modifier
       .fillMaxWidth()
-      .padding(horizontal = 16.dp, vertical = 6.dp)
-      .border(1.dp, ObsidianBorder, RoundedCornerShape(16.dp))
-      .testTag("mal_tracking_section")
+      .testTag("mal_tracking_section"),
+    verticalArrangement = Arrangement.spacedBy(12.dp)
   ) {
-    Column(
-      modifier = Modifier.padding(14.dp),
-      verticalArrangement = Arrangement.spacedBy(10.dp)
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.SpaceBetween
     ) {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-      ) {
-        Column {
-          Text(
-            text = stringResource(R.string.mal_section_title),
-            style = MaterialTheme.typography.titleSmall,
-            color = VlcOrange
-          )
-          Text(
-            text = stringResource(R.string.mal_progress_label, watchedEpisodes, totalEpisodes),
-            style = MaterialTheme.typography.labelSmall,
-            color = SecondaryGray
-          )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-          if (anime.malId != null) {
-            OutlinedButton(
-              onClick = { onOpenMalWeb(anime.malId) },
-              contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-              modifier = Modifier.minimumInteractiveComponentSize()
-            ) {
-              Icon(
-                imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
-                contentDescription = null,
-                tint = VlcOrange,
-                modifier = Modifier.size(14.dp)
-              )
-              Spacer(modifier = Modifier.width(4.dp))
-              Text(
-                text = stringResource(R.string.mal_open_web),
-                style = MaterialTheme.typography.labelSmall,
-                color = VlcOrange
-              )
-            }
-            IconButton(
-              onClick = onUnlinkMal,
-              modifier = Modifier.minimumInteractiveComponentSize()
-            ) {
-              Icon(
-                imageVector = Icons.Rounded.LinkOff,
-                contentDescription = stringResource(R.string.mal_unlink_button),
-                tint = SecondaryGray,
-                modifier = Modifier.size(18.dp)
-              )
-            }
-          } else {
-            OutlinedButton(
-              onClick = onSearchMalClick,
-              contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-              modifier = Modifier
-                .minimumInteractiveComponentSize()
-                .testTag("mal_search_button")
-            ) {
-              Icon(
-                imageVector = Icons.Rounded.Search,
-                contentDescription = null,
-                tint = VlcOrange,
-                modifier = Modifier.size(15.dp)
-              )
-              Spacer(modifier = Modifier.width(4.dp))
-              Text(
-                text = stringResource(R.string.mal_search_button),
-                style = MaterialTheme.typography.labelSmall,
-                color = VlcOrange
-              )
-            }
+      Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+          text = stringResource(R.string.mal_section_title),
+          style = MaterialTheme.typography.titleMedium,
+          color = TextPrimary
+        )
+        Text(
+          text = stringResource(R.string.mal_progress_label, watchedEpisodes, totalEpisodes),
+          style = MaterialTheme.typography.labelSmall,
+          color = SecondaryGray
+        )
+      }
+      Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (anime.malId != null) {
+          OutlinedButton(
+            onClick = { onOpenMalWeb(anime.malId) },
+            shape = AnimePlayRoleShapes.Button,
+            border = BorderStroke(1.dp, ObsidianBorder),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            modifier = Modifier.minimumInteractiveComponentSize()
+          ) {
+            Text(
+              text = stringResource(R.string.mal_open_web),
+              style = MaterialTheme.typography.labelSmall,
+              color = TextPrimary
+            )
+          }
+          IconButton(
+            onClick = onUnlinkMal,
+            modifier = Modifier.minimumInteractiveComponentSize()
+          ) {
+            Icon(
+              imageVector = Icons.Rounded.LinkOff,
+              contentDescription = stringResource(R.string.mal_unlink_button),
+              tint = SecondaryGray,
+              modifier = Modifier.size(18.dp)
+            )
+          }
+        } else {
+          OutlinedButton(
+            onClick = onSearchMalClick,
+            shape = AnimePlayRoleShapes.Button,
+            border = BorderStroke(1.dp, ObsidianBorder),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+            modifier = Modifier
+              .minimumInteractiveComponentSize()
+              .testTag("mal_search_button")
+          ) {
+            Icon(
+              imageVector = Icons.Rounded.Search,
+              contentDescription = null,
+              tint = TextPrimary,
+              modifier = Modifier.size(15.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+              text = stringResource(R.string.mal_search_button),
+              style = MaterialTheme.typography.labelSmall,
+              color = TextPrimary
+            )
           }
         }
       }
+    }
 
-      Text(
-        text = stringResource(R.string.mal_status_label),
-        style = MaterialTheme.typography.labelSmall,
-        color = SecondaryGray
-      )
-      LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(statuses) { (code, label) ->
-          FilterChip(
-            selected = anime.malStatus == code,
-            onClick = { onSelectStatus(code) },
-            label = { Text(text = label, style = MaterialTheme.typography.labelSmall) },
-            colors = FilterChipDefaults.filterChipColors(
-              selectedContainerColor = VlcOrange,
-              selectedLabelColor = OnPrimaryBlack,
-              containerColor = ObsidianSurfaceElevated,
-              labelColor = SecondaryGray
-            )
-          )
-        }
+    Text(
+      text = stringResource(R.string.mal_status_label),
+      style = MaterialTheme.typography.labelSmall,
+      color = SecondaryGray
+    )
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      items(statuses) { (code, label) ->
+        FilterChip(
+          selected = anime.malStatus == code,
+          onClick = { onSelectStatus(code) },
+          shape = AnimePlayRoleShapes.Chip,
+          border = neutralChipBorder,
+          label = { Text(text = label, style = MaterialTheme.typography.labelSmall) },
+          colors = neutralChipColors
+        )
       }
+    }
 
-      Text(
-        text = stringResource(R.string.mal_user_score_label),
-        style = MaterialTheme.typography.labelSmall,
-        color = SecondaryGray
-      )
-      LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        items((1..10).toList()) { score ->
-          FilterChip(
-            selected = anime.malUserScore == score,
-            onClick = { onSelectUserScore(if (anime.malUserScore == score) null else score) },
-            leadingIcon = {
-              Icon(
-                imageVector = Icons.Rounded.Star,
-                contentDescription = null,
-                modifier = Modifier.size(13.dp)
-              )
-            },
-            label = { Text(text = score.toString(), style = MaterialTheme.typography.labelSmall) },
-            colors = FilterChipDefaults.filterChipColors(
-              selectedContainerColor = VlcOrange,
-              selectedLabelColor = OnPrimaryBlack,
-              selectedLeadingIconColor = OnPrimaryBlack,
-              containerColor = ObsidianSurfaceElevated,
-              labelColor = SecondaryGray,
-              iconColor = VlcOrange
+    Text(
+      text = stringResource(R.string.mal_user_score_label),
+      style = MaterialTheme.typography.labelSmall,
+      color = SecondaryGray
+    )
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+      items((1..10).toList()) { score ->
+        FilterChip(
+          selected = anime.malUserScore == score,
+          onClick = { onSelectUserScore(if (anime.malUserScore == score) null else score) },
+          shape = AnimePlayRoleShapes.Chip,
+          border = neutralChipBorder,
+          leadingIcon = {
+            Icon(
+              imageVector = Icons.Rounded.Star,
+              contentDescription = null,
+              modifier = Modifier.size(13.dp)
             )
-          )
-        }
+          },
+          label = { Text(text = score.toString(), style = MaterialTheme.typography.labelSmall) },
+          colors = neutralChipColors
+        )
       }
     }
   }
 }
 
-@Composable
-private fun MetaBadge(text: String) {
-  Surface(
-    color = ObsidianSurface.copy(alpha = 0.88f),
-    shape = RoundedCornerShape(8.dp),
-    modifier = Modifier.border(1.dp, ObsidianBorder, RoundedCornerShape(8.dp))
-  ) {
-    Text(
-      text = text,
-      style = MaterialTheme.typography.labelSmall,
-      color = MaterialTheme.colorScheme.onSurface,
-      modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-    )
-  }
-}
-
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EpisodeRowItem(
   episode: EpisodeEntity,
@@ -839,22 +803,18 @@ private fun EpisodeRowItem(
     else -> 0f
   }
 
-  Surface(
-    color = ObsidianSurface,
-    shape = RoundedCornerShape(14.dp),
+  Column(
     modifier = Modifier
       .fillMaxWidth()
-      .padding(horizontal = 16.dp, vertical = 5.dp)
-      .scaleOnPress(interaction)
-      .border(1.dp, ObsidianBorder, RoundedCornerShape(14.dp))
-      .clip(RoundedCornerShape(14.dp))
-      .clickable(interactionSource = interaction, indication = null, onClick = onPlayClick)
-      .testTag("episode_row_${episode.id}")
+      .padding(horizontal = 16.dp)
   ) {
     Row(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(10.dp),
+        .scaleOnPress(interaction)
+        .clickable(interactionSource = interaction, indication = null, onClick = onPlayClick)
+        .padding(vertical = 10.dp)
+        .testTag("episode_row_${episode.id}"),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -862,7 +822,7 @@ private fun EpisodeRowItem(
         modifier = Modifier
           .width(114.dp)
           .height(66.dp)
-          .clip(RoundedCornerShape(10.dp))
+          .clip(AnimePlayRoleShapes.Poster)
       ) {
         VideoThumbnail(
           uri = episode.fileUri,
@@ -911,7 +871,7 @@ private fun EpisodeRowItem(
         Text(
           text = stringResource(R.string.detail_episode_label, episode.number),
           style = MaterialTheme.typography.titleMedium,
-          color = if (episode.isWatched) SecondaryGray else MaterialTheme.colorScheme.onSurface
+          color = if (episode.isWatched) SecondaryGray else TextPrimary
         )
         Text(
           text = episode.fileName,
@@ -921,7 +881,7 @@ private fun EpisodeRowItem(
           overflow = TextOverflow.Ellipsis
         )
         FlowRow(
-          horizontalArrangement = Arrangement.spacedBy(6.dp),
+          horizontalArrangement = Arrangement.spacedBy(8.dp),
           verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
           if (episode.durationMs > 0L) {
@@ -932,17 +892,11 @@ private fun EpisodeRowItem(
             )
           }
           if (episode.isWatched) {
-            Surface(
-              color = VlcOrangeSoft,
-              shape = RoundedCornerShape(6.dp)
-            ) {
-              Text(
-                text = stringResource(R.string.detail_watched_label),
-                style = MaterialTheme.typography.labelSmall,
-                color = VlcOrange,
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-              )
-            }
+            Text(
+              text = stringResource(R.string.detail_watched_label),
+              style = MaterialTheme.typography.labelSmall,
+              color = SecondaryGray
+            )
           } else if (episode.lastPositionMs > 0L) {
             Text(
               text = stringResource(
@@ -950,42 +904,28 @@ private fun EpisodeRowItem(
                 TimeFormatters.formatDuration(episode.lastPositionMs)
               ),
               style = MaterialTheme.typography.labelSmall,
-              color = VlcOrange
+              color = TextPrimary
             )
           }
           if (episode.introStartMs >= 0L && episode.introEndMs > episode.introStartMs) {
-            Surface(
-              color = ObsidianSurfaceElevated,
-              shape = RoundedCornerShape(6.dp),
-              modifier = Modifier.border(1.dp, VlcOrange.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
-            ) {
-              Text(
-                text = stringResource(
-                  R.string.detail_intro_badge,
-                  "${TimeFormatters.formatDuration(episode.introStartMs)}-${TimeFormatters.formatDuration(episode.introEndMs)}"
-                ),
-                style = MaterialTheme.typography.labelSmall,
-                color = VlcOrange,
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-              )
-            }
+            Text(
+              text = stringResource(
+                R.string.detail_intro_badge,
+                "${TimeFormatters.formatDuration(episode.introStartMs)}-${TimeFormatters.formatDuration(episode.introEndMs)}"
+              ),
+              style = MaterialTheme.typography.labelSmall,
+              color = SecondaryGray
+            )
           }
           if (episode.outroStartMs >= 0L && episode.outroEndMs > episode.outroStartMs) {
-            Surface(
-              color = ObsidianSurfaceElevated,
-              shape = RoundedCornerShape(6.dp),
-              modifier = Modifier.border(1.dp, VlcOrange.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
-            ) {
-              Text(
-                text = stringResource(
-                  R.string.detail_outro_badge,
-                  "${TimeFormatters.formatDuration(episode.outroStartMs)}-${TimeFormatters.formatDuration(episode.outroEndMs)}"
-                ),
-                style = MaterialTheme.typography.labelSmall,
-                color = VlcOrange,
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-              )
-            }
+            Text(
+              text = stringResource(
+                R.string.detail_outro_badge,
+                "${TimeFormatters.formatDuration(episode.outroStartMs)}-${TimeFormatters.formatDuration(episode.outroEndMs)}"
+              ),
+              style = MaterialTheme.typography.labelSmall,
+              color = SecondaryGray
+            )
           }
         }
       }
@@ -1009,6 +949,7 @@ private fun EpisodeRowItem(
         )
       }
     }
+    HorizontalDivider(color = ObsidianDivider)
   }
 }
 
@@ -1020,11 +961,11 @@ private fun EditAnimeDetailsDialog(
   onSave: (title: String, coverUri: String?, synopsis: String, genre: String, releaseDate: String) -> Unit
 ) {
   val scope = rememberCoroutineScope()
-  var title by remember { mutableStateOf(anime.title) }
-  var coverUri by remember { mutableStateOf(anime.customCoverUri) }
-  var synopsis by remember { mutableStateOf(anime.synopsis) }
-  var genre by remember { mutableStateOf(anime.genre) }
-  var releaseDate by remember {
+  var title by remember(anime.id) { mutableStateOf(anime.title) }
+  var coverUri by remember(anime.id) { mutableStateOf(anime.customCoverUri) }
+  var synopsis by remember(anime.id) { mutableStateOf(anime.synopsis) }
+  var genre by remember(anime.id) { mutableStateOf(anime.genre) }
+  var releaseDate by remember(anime.id) {
     mutableStateOf(anime.releaseDate.ifBlank { anime.releaseYear?.toString().orEmpty() })
   }
 
@@ -1041,10 +982,12 @@ private fun EditAnimeDetailsDialog(
   AlertDialog(
     onDismissRequest = onDismiss,
     containerColor = ObsidianSurface,
+    shape = AnimePlayRoleShapes.Dialog,
     title = {
       Text(
         text = stringResource(R.string.detail_edit_info_title),
-        style = MaterialTheme.typography.titleLarge
+        style = MaterialTheme.typography.titleLarge,
+        color = TextPrimary
       )
     },
     text = {
@@ -1063,9 +1006,8 @@ private fun EditAnimeDetailsDialog(
             uri = coverUri ?: anime.coverUri,
             contentDescription = stringResource(R.string.cd_anime_thumbnail, title),
             modifier = Modifier
-              .size(width = 72.dp, height = 96.dp)
-              .clip(RoundedCornerShape(10.dp))
-              .border(1.dp, ObsidianBorder, RoundedCornerShape(10.dp)),
+              .size(width = 72.dp, height = 104.dp)
+              .clip(AnimePlayRoleShapes.Poster),
             targetWidthPx = 220,
             targetHeightPx = 300
           )
@@ -1076,18 +1018,20 @@ private fun EditAnimeDetailsDialog(
                   PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                 )
               },
+              shape = AnimePlayRoleShapes.Button,
+              border = BorderStroke(1.dp, ObsidianBorder),
               modifier = Modifier.minimumInteractiveComponentSize()
             ) {
               Icon(
                 imageVector = Icons.Rounded.Image,
                 contentDescription = null,
-                tint = VlcOrange,
+                tint = TextPrimary,
                 modifier = Modifier.size(16.dp)
               )
               Spacer(modifier = Modifier.width(6.dp))
               Text(
                 text = stringResource(R.string.detail_pick_cover),
-                color = VlcOrange,
+                color = TextPrimary,
                 style = MaterialTheme.typography.labelMedium
               )
             }
@@ -1111,6 +1055,7 @@ private fun EditAnimeDetailsDialog(
           onValueChange = { title = it },
           label = { Text(stringResource(R.string.detail_title_label)) },
           singleLine = true,
+          shape = AnimePlayRoleShapes.Input,
           modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(
@@ -1120,6 +1065,7 @@ private fun EditAnimeDetailsDialog(
           placeholder = { Text(stringResource(R.string.detail_synopsis_placeholder)) },
           minLines = 3,
           maxLines = 5,
+          shape = AnimePlayRoleShapes.Input,
           modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(
@@ -1128,6 +1074,7 @@ private fun EditAnimeDetailsDialog(
           label = { Text(stringResource(R.string.detail_genre_label)) },
           placeholder = { Text(stringResource(R.string.detail_genre_placeholder)) },
           singleLine = true,
+          shape = AnimePlayRoleShapes.Input,
           modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(
@@ -1136,6 +1083,7 @@ private fun EditAnimeDetailsDialog(
           label = { Text(stringResource(R.string.detail_release_date_label)) },
           placeholder = { Text(stringResource(R.string.detail_release_date_placeholder)) },
           singleLine = true,
+          shape = AnimePlayRoleShapes.Input,
           modifier = Modifier.fillMaxWidth()
         )
       }
@@ -1143,8 +1091,9 @@ private fun EditAnimeDetailsDialog(
     confirmButton = {
       Button(
         onClick = { onSave(title, coverUri, synopsis, genre, releaseDate) },
+        shape = AnimePlayRoleShapes.Button,
         colors = ButtonDefaults.buttonColors(
-          containerColor = VlcOrange,
+          containerColor = TextPrimary,
           contentColor = OnPrimaryBlack
         )
       ) {
@@ -1172,10 +1121,12 @@ private fun MalSearchDialog(
   AlertDialog(
     onDismissRequest = onDismiss,
     containerColor = ObsidianSurface,
+    shape = AnimePlayRoleShapes.Dialog,
     title = {
       Text(
         text = stringResource(R.string.mal_search_dialog_title),
-        style = MaterialTheme.typography.titleLarge
+        style = MaterialTheme.typography.titleLarge,
+        color = TextPrimary
       )
     },
     text = {
@@ -1194,14 +1145,15 @@ private fun MalSearchDialog(
             onValueChange = { query = it },
             placeholder = { Text(stringResource(R.string.mal_search_hint)) },
             singleLine = true,
+            shape = AnimePlayRoleShapes.Input,
             modifier = Modifier.weight(1f)
           )
           IconButton(
             onClick = { onSearch(query) },
             modifier = Modifier
               .size(48.dp)
-              .clip(RoundedCornerShape(12.dp))
-              .background(VlcOrange)
+              .clip(AnimePlayRoleShapes.Button)
+              .background(TextPrimary)
           ) {
             Icon(
               imageVector = Icons.Rounded.Search,
@@ -1248,61 +1200,54 @@ private fun MalSearchDialog(
 
           else -> {
             LazyColumn(
-              verticalArrangement = Arrangement.spacedBy(8.dp),
+              verticalArrangement = Arrangement.spacedBy(10.dp),
               modifier = Modifier.weight(1f, fill = false)
             ) {
               items(searchState.results, key = { it.malId }) { item ->
-                Surface(
-                  color = ObsidianSurfaceElevated,
-                  shape = RoundedCornerShape(12.dp),
+                Row(
                   modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, ObsidianBorder, RoundedCornerShape(12.dp))
-                    .clip(RoundedCornerShape(12.dp))
                     .clickable { onSelectCandidate(item) }
+                    .padding(vertical = 6.dp),
+                  horizontalArrangement = Arrangement.spacedBy(10.dp),
+                  verticalAlignment = Alignment.CenterVertically
                 ) {
-                  Row(
-                    modifier = Modifier.padding(10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                  VideoThumbnail(
+                    uri = item.coverUrl,
+                    contentDescription = item.title,
+                    modifier = Modifier
+                      .size(width = 48.dp, height = 72.dp)
+                      .clip(AnimePlayRoleShapes.Poster),
+                    targetWidthPx = 140,
+                    targetHeightPx = 200
+                  )
+                  Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
                   ) {
-                    VideoThumbnail(
-                      uri = item.coverUrl,
-                      contentDescription = item.title,
-                      modifier = Modifier
-                        .size(width = 50.dp, height = 68.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                      targetWidthPx = 140,
-                      targetHeightPx = 200
+                    Text(
+                      text = item.title,
+                      style = MaterialTheme.typography.titleSmall,
+                      color = TextPrimary,
+                      maxLines = 2,
+                      overflow = TextOverflow.Ellipsis
                     )
-                    Column(
-                      modifier = Modifier.weight(1f),
-                      verticalArrangement = Arrangement.spacedBy(3.dp)
-                    ) {
+                    Text(
+                      text = buildString {
+                        append(item.genre)
+                        if (item.releaseDate.isNotBlank()) append(" • ${item.releaseDate}")
+                      },
+                      style = MaterialTheme.typography.labelSmall,
+                      color = SecondaryGray,
+                      maxLines = 1,
+                      overflow = TextOverflow.Ellipsis
+                    )
+                    item.score?.let { sc ->
                       Text(
-                        text = item.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                      )
-                      Text(
-                        text = buildString {
-                          append(item.genre)
-                          if (item.releaseDate.isNotBlank()) append(" • ${item.releaseDate}")
-                        },
+                        text = stringResource(R.string.mal_score_badge, sc),
                         style = MaterialTheme.typography.labelSmall,
-                        color = SecondaryGray,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        color = SecondaryGray
                       )
-                      item.score?.let { sc ->
-                        Text(
-                          text = stringResource(R.string.mal_score_badge, sc),
-                          style = MaterialTheme.typography.labelSmall,
-                          color = VlcOrange
-                        )
-                      }
                     }
                   }
                 }
@@ -1333,10 +1278,12 @@ private fun ManageAnimePlaylistDialog(
   AlertDialog(
     onDismissRequest = onDismiss,
     containerColor = ObsidianSurface,
+    shape = AnimePlayRoleShapes.Dialog,
     title = {
       Text(
         text = stringResource(R.string.detail_playlist_dialog_title),
-        style = MaterialTheme.typography.titleLarge
+        style = MaterialTheme.typography.titleLarge,
+        color = TextPrimary
       )
     },
     text = {
@@ -1356,41 +1303,35 @@ private fun ManageAnimePlaylistDialog(
         } else {
           playlists.forEach { playlist ->
             val checked = playlist.id in memberPlaylistIds
-            Surface(
-              color = ObsidianSurfaceElevated,
-              shape = RoundedCornerShape(10.dp),
+            Row(
               modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
                 .clickable { onToggleMembership(playlist.id, !checked) }
+                .padding(vertical = 4.dp),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-              Row(
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-              ) {
-                Checkbox(
-                  checked = checked,
-                  onCheckedChange = { onToggleMembership(playlist.id, it) },
-                  colors = CheckboxDefaults.colors(
-                    checkedColor = VlcOrange,
-                    checkmarkColor = OnPrimaryBlack
-                  )
+              Checkbox(
+                checked = checked,
+                onCheckedChange = { onToggleMembership(playlist.id, it) },
+                colors = CheckboxDefaults.colors(
+                  checkedColor = VlcOrange,
+                  checkmarkColor = OnPrimaryBlack
                 )
-                Column(modifier = Modifier.weight(1f)) {
-                  Text(
-                    text = playlist.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                  )
-                  Text(
-                    text = stringResource(R.string.playlist_item_count, playlist.animeCount),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = SecondaryGray
-                  )
-                }
+              )
+              Column(modifier = Modifier.weight(1f)) {
+                Text(
+                  text = playlist.name,
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = TextPrimary,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                  text = stringResource(R.string.playlist_item_count, playlist.animeCount),
+                  style = MaterialTheme.typography.labelSmall,
+                  color = SecondaryGray
+                )
               }
             }
           }
@@ -1406,6 +1347,7 @@ private fun ManageAnimePlaylistDialog(
             onValueChange = { newPlaylistName = it },
             placeholder = { Text(stringResource(R.string.playlist_name_hint)) },
             singleLine = true,
+            shape = AnimePlayRoleShapes.Input,
             modifier = Modifier.weight(1f)
           )
           Button(
@@ -1417,8 +1359,9 @@ private fun ManageAnimePlaylistDialog(
               }
             },
             enabled = newPlaylistName.isNotBlank(),
+            shape = AnimePlayRoleShapes.Button,
             colors = ButtonDefaults.buttonColors(
-              containerColor = VlcOrange,
+              containerColor = TextPrimary,
               contentColor = OnPrimaryBlack
             ),
             modifier = Modifier.height(48.dp)
@@ -1430,8 +1373,9 @@ private fun ManageAnimePlaylistDialog(
     },
     confirmButton = {
       TextButton(onClick = onDismiss) {
-        Text(stringResource(R.string.action_close), color = VlcOrange)
+        Text(stringResource(R.string.action_close), color = SecondaryGray)
       }
     }
   )
 }
+

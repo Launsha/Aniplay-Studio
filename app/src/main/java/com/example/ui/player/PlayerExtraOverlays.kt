@@ -3,8 +3,8 @@ package com.example.ui.player
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FastForward
@@ -41,10 +40,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.R
+import com.example.ui.theme.AnimePlayRoleShapes
 import com.example.ui.theme.ObsidianBackground
+import com.example.ui.theme.ObsidianBorder
 import com.example.ui.theme.ObsidianSurface
-import com.example.ui.theme.OnPrimaryBlack
-import com.example.ui.theme.VlcOrange
+import com.example.ui.theme.TextPrimary
 import com.example.util.TimeFormatters
 import com.example.util.scaleOnPress
 
@@ -67,11 +67,10 @@ fun HorizontalSwipeSeekOverlay(
   if (deltaMs == null) return
   Box(modifier = Modifier.fillMaxSize()) {
     Surface(
-      color = ObsidianBackground.copy(alpha = 0.88f),
-      shape = RoundedCornerShape(16.dp),
+      color = ObsidianBackground.copy(alpha = 0.9f),
+      shape = AnimePlayRoleShapes.Dialog,
       modifier = Modifier
         .align(Alignment.Center)
-        .border(1.dp, VlcOrange.copy(alpha = 0.7f), RoundedCornerShape(16.dp))
         .testTag("horizontal_swipe_seek_overlay")
     ) {
       val formattedDelta = TimeFormatters.formatDuration(kotlin.math.abs(deltaMs))
@@ -83,7 +82,7 @@ fun HorizontalSwipeSeekOverlay(
           formattedTarget
         ),
         style = MaterialTheme.typography.titleMedium,
-        color = VlcOrange,
+        color = TextPrimary,
         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
       )
     }
@@ -99,14 +98,14 @@ fun AbRepeatActiveBadge(
   if (pointAMs == null || pointBMs == null) return
   Box(modifier = Modifier.fillMaxSize()) {
     Surface(
-      color = ObsidianBackground.copy(alpha = 0.82f),
-      shape = RoundedCornerShape(50),
+      color = ObsidianBackground.copy(alpha = 0.88f),
+      shape = AnimePlayRoleShapes.Chip,
+      border = BorderStroke(1.dp, ObsidianBorder),
       modifier = Modifier
         .align(Alignment.TopStart)
         .windowInsetsPadding(WindowInsets.safeDrawing)
         .padding(start = 16.dp, top = 62.dp)
-        .border(1.dp, VlcOrange.copy(alpha = 0.65f), RoundedCornerShape(50))
-        .clip(RoundedCornerShape(50))
+        .clip(AnimePlayRoleShapes.Chip)
         .clickable(onClick = onClear)
         .testTag("ab_repeat_badge")
     ) {
@@ -118,7 +117,7 @@ fun AbRepeatActiveBadge(
         Icon(
           imageVector = Icons.Rounded.Repeat,
           contentDescription = null,
-          tint = VlcOrange,
+          tint = TextPrimary,
           modifier = Modifier.size(16.dp)
         )
         Text(
@@ -128,12 +127,12 @@ fun AbRepeatActiveBadge(
             TimeFormatters.formatDuration(pointBMs)
           ),
           style = MaterialTheme.typography.labelMedium,
-          color = VlcOrange
+          color = TextPrimary
         )
         Icon(
           imageVector = Icons.Rounded.Close,
           contentDescription = stringResource(R.string.player_ab_clear),
-          tint = VlcOrange,
+          tint = TextPrimary,
           modifier = Modifier.size(15.dp)
         )
       }
@@ -168,19 +167,19 @@ fun FloatingSkipIntroOutroPills(
         interactionSource = interaction,
         colors = ButtonDefaults.buttonColors(
           containerColor = ObsidianSurface.copy(alpha = 0.94f),
-          contentColor = VlcOrange
+          contentColor = TextPrimary
         ),
-        shape = RoundedCornerShape(14.dp),
+        shape = AnimePlayRoleShapes.Button,
+        border = BorderStroke(1.dp, ObsidianBorder),
         modifier = Modifier
           .height(48.dp)
           .scaleOnPress(interaction)
-          .border(1.5.dp, VlcOrange, RoundedCornerShape(14.dp))
           .testTag(if (inIntro) "floating_skip_intro_button" else "floating_skip_outro_button")
       ) {
         Icon(
           imageVector = if (inIntro || !hasNextEpisode) Icons.Rounded.FastForward else Icons.Rounded.SkipNext,
           contentDescription = null,
-          tint = VlcOrange,
+          tint = TextPrimary,
           modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(6.dp))
@@ -191,7 +190,7 @@ fun FloatingSkipIntroOutroPills(
             else -> stringResource(R.string.player_skip_outro)
           },
           style = MaterialTheme.typography.labelLarge,
-          color = OnPrimaryBlack.takeIf { false } ?: VlcOrange
+          color = TextPrimary
         )
       }
     }

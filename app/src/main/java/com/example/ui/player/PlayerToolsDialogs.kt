@@ -1,6 +1,6 @@
 package com.example.ui.player
 
-import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -49,11 +49,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.TrackGroup
 import com.example.R
+import com.example.ui.theme.AnimePlayRoleShapes
 import com.example.ui.theme.ObsidianBorder
+import com.example.ui.theme.ObsidianDivider
 import com.example.ui.theme.ObsidianSurface
 import com.example.ui.theme.ObsidianSurfaceElevated
 import com.example.ui.theme.OnPrimaryBlack
 import com.example.ui.theme.SecondaryGray
+import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.VlcOrange
 import com.example.util.EqualizerPresets
 import kotlin.math.roundToInt
@@ -76,6 +79,7 @@ fun TrackSelectorDialog(
 ) {
   AlertDialog(
     onDismissRequest = onDismiss,
+    shape = AnimePlayRoleShapes.Dialog,
     containerColor = ObsidianSurface,
     title = {
       Text(
@@ -98,13 +102,13 @@ fun TrackSelectorDialog(
           Icon(
             imageVector = Icons.Rounded.Audiotrack,
             contentDescription = null,
-            tint = VlcOrange,
+            tint = TextPrimary,
             modifier = Modifier.size(18.dp)
           )
           Text(
             text = stringResource(R.string.player_audio_tracks),
             style = MaterialTheme.typography.titleSmall,
-            color = VlcOrange
+            color = TextPrimary
           )
         }
         if (audioTracks.isEmpty()) {
@@ -126,7 +130,7 @@ fun TrackSelectorDialog(
           }
         }
 
-        HorizontalDivider(color = ObsidianBorder)
+        HorizontalDivider(color = ObsidianDivider)
 
         Row(
           verticalAlignment = Alignment.CenterVertically,
@@ -135,13 +139,13 @@ fun TrackSelectorDialog(
           Icon(
             imageVector = Icons.Rounded.Subtitles,
             contentDescription = null,
-            tint = VlcOrange,
+            tint = TextPrimary,
             modifier = Modifier.size(18.dp)
           )
           Text(
             text = stringResource(R.string.player_subtitle_tracks),
             style = MaterialTheme.typography.titleSmall,
-            color = VlcOrange
+            color = TextPrimary
           )
         }
         subtitleTracks.forEach { track ->
@@ -159,17 +163,22 @@ fun TrackSelectorDialog(
             onDismiss()
             onPickExternalSubtitle()
           },
+          shape = AnimePlayRoleShapes.Button,
+          border = BorderStroke(1.dp, ObsidianBorder),
           modifier = Modifier.fillMaxWidth()
         ) {
           Text(
             text = stringResource(R.string.player_select_subtitle),
-            color = VlcOrange
+            color = TextPrimary
           )
         }
       }
     },
     confirmButton = {
-      TextButton(onClick = onDismiss) {
+      TextButton(
+        onClick = onDismiss,
+        shape = AnimePlayRoleShapes.Button
+      ) {
         Text(stringResource(R.string.action_close), color = SecondaryGray)
       }
     }
@@ -183,16 +192,12 @@ private fun TrackOptionRow(
   onClick: () -> Unit
 ) {
   Surface(
-    color = ObsidianSurfaceElevated,
-    shape = RoundedCornerShape(10.dp),
+    color = if (isSelected) ObsidianSurfaceElevated else ObsidianSurface,
+    shape = RoundedCornerShape(12.dp),
+    border = if (isSelected) BorderStroke(1.dp, ObsidianBorder) else null,
     modifier = Modifier
       .fillMaxWidth()
-      .border(
-        1.dp,
-        if (isSelected) VlcOrange else ObsidianBorder,
-        RoundedCornerShape(10.dp)
-      )
-      .clip(RoundedCornerShape(10.dp))
+      .clip(RoundedCornerShape(12.dp))
       .clickable(onClick = onClick)
   ) {
     Row(
@@ -203,7 +208,7 @@ private fun TrackOptionRow(
       Text(
         text = label,
         style = MaterialTheme.typography.bodySmall,
-        color = if (isSelected) VlcOrange else MaterialTheme.colorScheme.onSurface
+        color = TextPrimary
       )
       if (isSelected) {
         Icon(
@@ -255,7 +260,7 @@ fun VlcToolsDialog(
   onDismiss: () -> Unit
 ) {
   val chipColors = FilterChipDefaults.filterChipColors(
-    selectedContainerColor = VlcOrange,
+    selectedContainerColor = TextPrimary,
     selectedLabelColor = OnPrimaryBlack,
     containerColor = ObsidianSurfaceElevated,
     labelColor = SecondaryGray
@@ -263,6 +268,7 @@ fun VlcToolsDialog(
 
   AlertDialog(
     onDismissRequest = onDismiss,
+    shape = AnimePlayRoleShapes.Dialog,
     containerColor = ObsidianSurface,
     title = {
       Text(
@@ -278,74 +284,88 @@ fun VlcToolsDialog(
           .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
       ) {
-        // Intro & Outro Scanner + Auto-skip
         OutlinedButton(
           onClick = {
             onDismiss()
             onOpenIntroOutroScanner()
           },
+          shape = AnimePlayRoleShapes.Button,
+          border = BorderStroke(1.dp, ObsidianBorder),
           modifier = Modifier.fillMaxWidth()
         ) {
           Icon(
             imageVector = Icons.Rounded.AutoFixHigh,
             contentDescription = null,
-            tint = VlcOrange,
+            tint = TextPrimary,
             modifier = Modifier.size(18.dp)
           )
           Spacer(modifier = Modifier.width(8.dp))
           Text(
             text = stringResource(R.string.intro_outro_dialog_title),
-            color = VlcOrange
+            color = TextPrimary
           )
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
           FilterChip(
             selected = autoSkipIntro,
             onClick = { onToggleAutoSkipIntro(!autoSkipIntro) },
+            shape = AnimePlayRoleShapes.Chip,
+            border = FilterChipDefaults.filterChipBorder(true, autoSkipIntro, borderColor = ObsidianBorder, selectedBorderColor = TextPrimary),
             label = { Text(stringResource(R.string.settings_auto_skip_intro), style = MaterialTheme.typography.labelSmall) },
             colors = chipColors
           )
           FilterChip(
             selected = autoSkipOutro,
             onClick = { onToggleAutoSkipOutro(!autoSkipOutro) },
+            shape = AnimePlayRoleShapes.Chip,
+            border = FilterChipDefaults.filterChipBorder(true, autoSkipOutro, borderColor = ObsidianBorder, selectedBorderColor = TextPrimary),
             label = { Text(stringResource(R.string.settings_auto_skip_outro), style = MaterialTheme.typography.labelSmall) },
             colors = chipColors
           )
           FilterChip(
             selected = backgroundAudioPlay,
             onClick = { onToggleBackgroundAudio(!backgroundAudioPlay) },
+            shape = AnimePlayRoleShapes.Chip,
+            border = FilterChipDefaults.filterChipBorder(true, backgroundAudioPlay, borderColor = ObsidianBorder, selectedBorderColor = TextPrimary),
             label = { Text(stringResource(R.string.player_background_audio_toggle), style = MaterialTheme.typography.labelSmall) },
             colors = chipColors
           )
         }
 
-        HorizontalDivider(color = ObsidianBorder)
+        HorizontalDivider(color = ObsidianDivider)
 
-        // A-B Repeat & Loop Mode
         Row(
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-          Icon(Icons.Rounded.Repeat, contentDescription = null, tint = VlcOrange, modifier = Modifier.size(18.dp))
-          Text(stringResource(R.string.player_ab_repeat_title), style = MaterialTheme.typography.titleSmall, color = VlcOrange)
+          Icon(Icons.Rounded.Repeat, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(18.dp))
+          Text(stringResource(R.string.player_ab_repeat_title), style = MaterialTheme.typography.titleSmall, color = TextPrimary)
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          val aSet = abPointAMs != null
+          val bSet = abPointBMs != null
           FilterChip(
-            selected = abPointAMs != null,
+            selected = aSet,
             onClick = onSetAbPointA,
+            shape = AnimePlayRoleShapes.Chip,
+            border = FilterChipDefaults.filterChipBorder(true, aSet, borderColor = ObsidianBorder, selectedBorderColor = TextPrimary),
             label = { Text(stringResource(R.string.player_ab_set_a), style = MaterialTheme.typography.labelSmall) },
             colors = chipColors
           )
           FilterChip(
-            selected = abPointBMs != null,
+            selected = bSet,
             onClick = onSetAbPointB,
+            shape = AnimePlayRoleShapes.Chip,
+            border = FilterChipDefaults.filterChipBorder(true, bSet, borderColor = ObsidianBorder, selectedBorderColor = TextPrimary),
             label = { Text(stringResource(R.string.player_ab_set_b), style = MaterialTheme.typography.labelSmall) },
             colors = chipColors
           )
-          if (abPointAMs != null || abPointBMs != null) {
+          if (aSet || bSet) {
             FilterChip(
               selected = false,
               onClick = onClearAbRepeat,
+              shape = AnimePlayRoleShapes.Chip,
+              border = FilterChipDefaults.filterChipBorder(true, false, borderColor = ObsidianBorder, selectedBorderColor = TextPrimary),
               label = { Text(stringResource(R.string.player_ab_clear), style = MaterialTheme.typography.labelSmall) },
               colors = chipColors
             )
@@ -358,18 +378,20 @@ fun VlcToolsDialog(
             "one" to R.string.player_repeat_one,
             "all" to R.string.player_repeat_all
           ).forEach { (key, res) ->
+            val selected = repeatMode == key
             FilterChip(
-              selected = repeatMode == key,
+              selected = selected,
               onClick = { onSelectRepeatMode(key) },
+              shape = AnimePlayRoleShapes.Chip,
+              border = FilterChipDefaults.filterChipBorder(true, selected, borderColor = ObsidianBorder, selectedBorderColor = TextPrimary),
               label = { Text(stringResource(res), style = MaterialTheme.typography.labelSmall) },
               colors = chipColors
             )
           }
         }
 
-        HorizontalDivider(color = ObsidianBorder)
+        HorizontalDivider(color = ObsidianDivider)
 
-        // Equalizer & Boost
         Row(
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -377,20 +399,23 @@ fun VlcToolsDialog(
           Icon(
             imageVector = Icons.Rounded.Equalizer,
             contentDescription = null,
-            tint = VlcOrange,
+            tint = TextPrimary,
             modifier = Modifier.size(18.dp)
           )
           Text(
             text = stringResource(R.string.player_equalizer_title),
             style = MaterialTheme.typography.titleSmall,
-            color = VlcOrange
+            color = TextPrimary
           )
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
           EqualizerPresets.presets.forEach { preset ->
+            val selected = eqPreset == preset.key
             FilterChip(
-              selected = eqPreset == preset.key,
+              selected = selected,
               onClick = { onSelectEqPreset(preset.key) },
+              shape = AnimePlayRoleShapes.Chip,
+              border = FilterChipDefaults.filterChipBorder(true, selected, borderColor = ObsidianBorder, selectedBorderColor = TextPrimary),
               label = { Text(stringResource(preset.labelRes), style = MaterialTheme.typography.labelSmall) },
               colors = chipColors
             )
@@ -399,7 +424,7 @@ fun VlcToolsDialog(
         Text(
           text = stringResource(EqualizerPresets.findByKey(eqPreset).descriptionRes),
           style = MaterialTheme.typography.labelSmall,
-          color = VlcOrange
+          color = SecondaryGray
         )
         Text(
           text = stringResource(R.string.settings_audio_boost, audioBoostPercent),
@@ -418,9 +443,8 @@ fun VlcToolsDialog(
           )
         )
 
-        HorizontalDivider(color = ObsidianBorder)
+        HorizontalDivider(color = ObsidianDivider)
 
-        // Subtitle Delay Sync & Night Dimmer
         val delayPrefix = if (subtitleDelayMs > 0) "+" else ""
         Text(
           text = stringResource(R.string.player_sub_delay_title, "$delayPrefix$subtitleDelayMs"),
@@ -429,12 +453,15 @@ fun VlcToolsDialog(
         )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
           listOf(-500, -100, 0, 100, 500).forEach { delta ->
+            val selected = delta == 0 && subtitleDelayMs == 0
             FilterChip(
-              selected = delta == 0 && subtitleDelayMs == 0,
+              selected = selected,
               onClick = {
                 val next = if (delta == 0) 0 else subtitleDelayMs + delta
                 onChangeSubtitleDelay(next)
               },
+              shape = AnimePlayRoleShapes.Chip,
+              border = FilterChipDefaults.filterChipBorder(true, selected, borderColor = ObsidianBorder, selectedBorderColor = TextPrimary),
               label = {
                 Text(
                   text = if (delta == 0) "0 ms" else if (delta > 0) "+${delta}ms" else "${delta}ms",
@@ -463,9 +490,8 @@ fun VlcToolsDialog(
           )
         )
 
-        HorizontalDivider(color = ObsidianBorder)
+        HorizontalDivider(color = ObsidianDivider)
 
-        // Sleep Timer
         Row(
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -473,26 +499,32 @@ fun VlcToolsDialog(
           Icon(
             imageVector = Icons.Rounded.Bedtime,
             contentDescription = null,
-            tint = VlcOrange,
+            tint = TextPrimary,
             modifier = Modifier.size(18.dp)
           )
           Text(
             text = stringResource(R.string.player_sleep_timer),
             style = MaterialTheme.typography.titleSmall,
-            color = VlcOrange
+            color = TextPrimary
           )
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          val sleepOff = sleepMinutesRemaining == null && !sleepOnEpisodeEnd
           FilterChip(
-            selected = sleepMinutesRemaining == null && !sleepOnEpisodeEnd,
+            selected = sleepOff,
             onClick = { onSelectSleepMinutes(null) },
+            shape = AnimePlayRoleShapes.Chip,
+            border = FilterChipDefaults.filterChipBorder(true, sleepOff, borderColor = ObsidianBorder, selectedBorderColor = TextPrimary),
             label = { Text(stringResource(R.string.player_sleep_off), style = MaterialTheme.typography.labelSmall) },
             colors = chipColors
           )
           listOf(15, 30, 45, 60).forEach { mins ->
+            val selected = sleepMinutesRemaining == mins
             FilterChip(
-              selected = sleepMinutesRemaining == mins,
+              selected = selected,
               onClick = { onSelectSleepMinutes(mins) },
+              shape = AnimePlayRoleShapes.Chip,
+              border = FilterChipDefaults.filterChipBorder(true, selected, borderColor = ObsidianBorder, selectedBorderColor = TextPrimary),
               label = {
                 Text(
                   text = stringResource(R.string.player_sleep_minutes, mins),
@@ -505,24 +537,27 @@ fun VlcToolsDialog(
           FilterChip(
             selected = sleepOnEpisodeEnd,
             onClick = onSelectSleepEndOfEpisode,
+            shape = AnimePlayRoleShapes.Chip,
+            border = FilterChipDefaults.filterChipBorder(true, sleepOnEpisodeEnd, borderColor = ObsidianBorder, selectedBorderColor = TextPrimary),
             label = { Text(stringResource(R.string.player_sleep_end_ep), style = MaterialTheme.typography.labelSmall) },
             colors = chipColors
           )
         }
 
-        HorizontalDivider(color = ObsidianBorder)
+        HorizontalDivider(color = ObsidianDivider)
 
-        // Bookmark, Jump to Time, Screenshot, Media Info & PiP Actions
         OutlinedButton(
           onClick = {
             onAddBookmark()
             onDismiss()
           },
+          shape = AnimePlayRoleShapes.Button,
+          border = BorderStroke(1.dp, ObsidianBorder),
           modifier = Modifier.fillMaxWidth()
         ) {
-          Icon(Icons.Rounded.BookmarkAdd, contentDescription = null, tint = VlcOrange, modifier = Modifier.size(18.dp))
+          Icon(Icons.Rounded.BookmarkAdd, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(18.dp))
           Spacer(modifier = Modifier.width(8.dp))
-          Text(stringResource(R.string.player_bookmark_moment), color = VlcOrange)
+          Text(stringResource(R.string.player_bookmark_moment), color = TextPrimary)
         }
 
         OutlinedButton(
@@ -530,11 +565,13 @@ fun VlcToolsDialog(
             onDismiss()
             onOpenJumpToTime()
           },
+          shape = AnimePlayRoleShapes.Button,
+          border = BorderStroke(1.dp, ObsidianBorder),
           modifier = Modifier.fillMaxWidth()
         ) {
-          Icon(Icons.Rounded.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
+          Icon(Icons.Rounded.Schedule, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(18.dp))
           Spacer(modifier = Modifier.width(8.dp))
-          Text(stringResource(R.string.player_jump_to_time), color = MaterialTheme.colorScheme.onSurface)
+          Text(stringResource(R.string.player_jump_to_time), color = TextPrimary)
         }
 
         OutlinedButton(
@@ -542,11 +579,13 @@ fun VlcToolsDialog(
             onDismiss()
             onCaptureScreenshot()
           },
+          shape = AnimePlayRoleShapes.Button,
+          border = BorderStroke(1.dp, ObsidianBorder),
           modifier = Modifier.fillMaxWidth()
         ) {
-          Icon(Icons.Rounded.CameraAlt, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
+          Icon(Icons.Rounded.CameraAlt, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(18.dp))
           Spacer(modifier = Modifier.width(8.dp))
-          Text(stringResource(R.string.player_screenshot), color = MaterialTheme.colorScheme.onSurface)
+          Text(stringResource(R.string.player_screenshot), color = TextPrimary)
         }
 
         OutlinedButton(
@@ -554,11 +593,13 @@ fun VlcToolsDialog(
             onDismiss()
             onOpenMediaInfo()
           },
+          shape = AnimePlayRoleShapes.Button,
+          border = BorderStroke(1.dp, ObsidianBorder),
           modifier = Modifier.fillMaxWidth()
         ) {
-          Icon(Icons.Rounded.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
+          Icon(Icons.Rounded.Info, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(18.dp))
           Spacer(modifier = Modifier.width(8.dp))
-          Text(stringResource(R.string.player_media_info), color = MaterialTheme.colorScheme.onSurface)
+          Text(stringResource(R.string.player_media_info), color = TextPrimary)
         }
 
         if (canUsePip) {
@@ -567,25 +608,30 @@ fun VlcToolsDialog(
               onDismiss()
               onEnterPip()
             },
+            shape = AnimePlayRoleShapes.Button,
+            border = BorderStroke(1.dp, ObsidianBorder),
             modifier = Modifier.fillMaxWidth()
           ) {
             Icon(
               imageVector = Icons.Rounded.PictureInPictureAlt,
               contentDescription = null,
-              tint = MaterialTheme.colorScheme.onSurface,
+              tint = TextPrimary,
               modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
               text = stringResource(R.string.player_pip_mode),
-              color = MaterialTheme.colorScheme.onSurface
+              color = TextPrimary
             )
           }
         }
       }
     },
     confirmButton = {
-      TextButton(onClick = onDismiss) {
+      TextButton(
+        onClick = onDismiss,
+        shape = AnimePlayRoleShapes.Button
+      ) {
         Text(stringResource(R.string.action_close), color = SecondaryGray)
       }
     }

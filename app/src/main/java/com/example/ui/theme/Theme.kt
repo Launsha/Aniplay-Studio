@@ -1,17 +1,27 @@
 package com.example.ui.theme
 
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
+
+object AnimePlayRoleShapes {
+  val Poster = RoundedCornerShape(6.dp)
+  val Button = CircleShape
+  val BottomSheet = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+  val Dialog = RoundedCornerShape(16.dp)
+  val Chip = CircleShape
+  val Input = RoundedCornerShape(12.dp)
+}
 
 private val AnimePlayColorScheme = darkColorScheme(
   primary = VlcOrange,
   onPrimary = OnPrimaryBlack,
-  primaryContainer = VlcOrangeSoft,
-  onPrimaryContainer = VlcOrange,
+  primaryContainer = ObsidianSurfaceElevated,
+  onPrimaryContainer = TextPrimary,
   secondary = SecondaryGray,
   onSecondary = OnPrimaryBlack,
   background = ObsidianBackground,
@@ -26,9 +36,9 @@ private val AnimePlayColorScheme = darkColorScheme(
 )
 
 private val AnimePlayShapes = Shapes(
-  small = RoundedCornerShape(8.dp),
-  medium = RoundedCornerShape(14.dp),
-  large = RoundedCornerShape(20.dp)
+  small = RoundedCornerShape(6.dp),
+  medium = RoundedCornerShape(12.dp),
+  large = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
 )
 
 @Composable

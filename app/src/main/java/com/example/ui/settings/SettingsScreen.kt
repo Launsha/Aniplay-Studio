@@ -4,7 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
@@ -52,7 +51,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -75,12 +73,15 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
+import com.example.ui.theme.AnimePlayRoleShapes
 import com.example.ui.theme.ObsidianBackground
 import com.example.ui.theme.ObsidianBorder
+import com.example.ui.theme.ObsidianDivider
 import com.example.ui.theme.ObsidianSurface
 import com.example.ui.theme.ObsidianSurfaceElevated
 import com.example.ui.theme.OnPrimaryBlack
 import com.example.ui.theme.SecondaryGray
+import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.VlcOrange
 import com.example.util.scaleOnPress
 
@@ -110,7 +111,7 @@ fun SettingsScreen(
       TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
           containerColor = ObsidianBackground,
-          titleContentColor = MaterialTheme.colorScheme.onBackground
+          titleContentColor = TextPrimary
         ),
         navigationIcon = {
           IconButton(
@@ -224,16 +225,23 @@ fun SettingsContent(
         )
       }
 
-      // VLC-style Horizontal Category Tabs
       LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.testTag("settings_category_tabs")
       ) {
         items(SettingsCategory.entries) { category ->
+          val isSelected = selectedCategory == category
           FilterChip(
-            selected = selectedCategory == category,
+            selected = isSelected,
             onClick = { selectedCategory = category },
+            shape = AnimePlayRoleShapes.Chip,
+            border = FilterChipDefaults.filterChipBorder(
+              enabled = true,
+              selected = isSelected,
+              borderColor = ObsidianBorder,
+              selectedBorderColor = TextPrimary
+            ),
             label = {
               Text(
                 text = stringResource(category.labelRes),
@@ -241,9 +249,9 @@ fun SettingsContent(
               )
             },
             colors = FilterChipDefaults.filterChipColors(
-              selectedContainerColor = VlcOrange,
+              selectedContainerColor = TextPrimary,
               selectedLabelColor = OnPrimaryBlack,
-              containerColor = ObsidianSurface,
+              containerColor = ObsidianSurfaceElevated,
               labelColor = SecondaryGray
             ),
             modifier = Modifier.testTag("settings_tab_${category.name.lowercase()}")
@@ -252,8 +260,8 @@ fun SettingsContent(
       }
 
       LazyColumn(
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
         modifier = Modifier
           .fillMaxSize()
           .testTag("settings_list")
@@ -275,55 +283,53 @@ fun SettingsContent(
                     color = MaterialTheme.colorScheme.error
                   )
                 } else {
-                  Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    state.folders.forEach { folder ->
-                      Surface(
-                        color = ObsidianSurfaceElevated,
-                        shape = RoundedCornerShape(12.dp),
+                  Column {
+                    state.folders.forEachIndexed { index, folder ->
+                      Row(
                         modifier = Modifier
                           .fillMaxWidth()
-                          .border(1.dp, ObsidianBorder, RoundedCornerShape(12.dp))
+                          .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                       ) {
-                        Row(
-                          modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                          verticalAlignment = Alignment.CenterVertically,
-                          horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        Icon(
+                          imageVector = if (folder.isSdCard) Icons.Rounded.SdCard else Icons.Rounded.Folder,
+                          contentDescription = null,
+                          tint = TextPrimary,
+                          modifier = Modifier.size(20.dp)
+                        )
+                        Column(
+                          modifier = Modifier.weight(1f),
+                          verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                          Text(
+                            text = folder.displayLabel,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                          )
+                          Text(
+                            text = stringResource(
+                              if (folder.isSdCard) R.string.settings_sd_card_badge else R.string.settings_internal_badge
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SecondaryGray
+                          )
+                        }
+                        IconButton(
+                          onClick = { viewModel.removeFolder(folder) },
+                          modifier = Modifier.minimumInteractiveComponentSize()
                         ) {
                           Icon(
-                            imageVector = if (folder.isSdCard) Icons.Rounded.SdCard else Icons.Rounded.Folder,
-                            contentDescription = null,
-                            tint = VlcOrange,
-                            modifier = Modifier.size(20.dp)
+                            imageVector = Icons.Rounded.DeleteOutline,
+                            contentDescription = stringResource(R.string.action_delete),
+                            tint = SecondaryGray
                           )
-                          Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                              text = folder.displayLabel,
-                              style = MaterialTheme.typography.bodyMedium,
-                              color = MaterialTheme.colorScheme.onSurface,
-                              maxLines = 1,
-                              overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                              text = stringResource(
-                                if (folder.isSdCard) R.string.settings_sd_card_badge else R.string.settings_internal_badge
-                              ),
-                              style = MaterialTheme.typography.labelSmall,
-                              color = SecondaryGray
-                            )
-                          }
-                          IconButton(
-                            onClick = { viewModel.removeFolder(folder) },
-                            modifier = Modifier.minimumInteractiveComponentSize()
-                          ) {
-                            Icon(
-                              imageVector = Icons.Rounded.DeleteOutline,
-                              contentDescription = stringResource(R.string.action_delete),
-                              tint = SecondaryGray
-                            )
-                          }
                         }
+                      }
+                      if (index < state.folders.lastIndex) {
+                        HorizontalDivider(color = ObsidianDivider)
                       }
                     }
                   }
@@ -338,10 +344,10 @@ fun SettingsContent(
                     onClick = { folderPickerLauncher.launch(null) },
                     interactionSource = addInteraction,
                     colors = ButtonDefaults.buttonColors(
-                      containerColor = VlcOrange,
+                      containerColor = TextPrimary,
                       contentColor = OnPrimaryBlack
                     ),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = AnimePlayRoleShapes.Button,
                     modifier = Modifier
                       .weight(1f)
                       .height(48.dp)
@@ -367,7 +373,8 @@ fun SettingsContent(
                     onClick = { viewModel.scanNow() },
                     enabled = !state.isScanning,
                     interactionSource = scanInteraction,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = AnimePlayRoleShapes.Button,
+                    border = BorderStroke(1.dp, ObsidianBorder),
                     modifier = Modifier
                       .height(48.dp)
                       .scaleOnPress(scanInteraction)
@@ -375,13 +382,13 @@ fun SettingsContent(
                     Icon(
                       imageVector = Icons.Rounded.Refresh,
                       contentDescription = null,
-                      tint = VlcOrange,
+                      tint = TextPrimary,
                       modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                       text = stringResource(R.string.settings_scan_now),
-                      color = VlcOrange,
+                      color = TextPrimary,
                       style = MaterialTheme.typography.labelLarge,
                       maxLines = 1,
                       overflow = TextOverflow.Ellipsis
@@ -405,19 +412,20 @@ fun SettingsContent(
                             folderPickerLauncher.launch(null)
                           }
                         },
-                        shape = RoundedCornerShape(12.dp),
+                        shape = AnimePlayRoleShapes.Button,
+                        border = BorderStroke(1.dp, ObsidianBorder),
                         modifier = Modifier.height(48.dp)
                       ) {
                         Icon(
                           imageVector = Icons.Rounded.SdCard,
                           contentDescription = null,
-                          tint = VlcOrange,
+                          tint = TextPrimary,
                           modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                           text = stringResource(R.string.settings_pick_sd_card, volume.label),
-                          color = VlcOrange,
+                          color = TextPrimary,
                           style = MaterialTheme.typography.labelMedium,
                           maxLines = 1,
                           overflow = TextOverflow.Ellipsis
@@ -429,6 +437,8 @@ fun SettingsContent(
               }
             }
 
+            item { HorizontalDivider(color = ObsidianDivider) }
+
             item {
               SettingsSectionCard(title = stringResource(R.string.settings_mal_section)) {
                 SettingsToggleRow(
@@ -437,12 +447,13 @@ fun SettingsContent(
                   checked = state.settings.autoEnrichMal,
                   onCheckedChange = viewModel::setAutoEnrichMal
                 )
-                HorizontalDivider(color = ObsidianBorder)
+                HorizontalDivider(color = ObsidianDivider)
                 val exportInteraction = remember { MutableInteractionSource() }
                 OutlinedButton(
                   onClick = { malXmlLauncher.launch("animeplay_myanimelist.xml") },
                   interactionSource = exportInteraction,
-                  shape = RoundedCornerShape(12.dp),
+                  shape = AnimePlayRoleShapes.Button,
+                  border = BorderStroke(1.dp, ObsidianBorder),
                   modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
@@ -452,13 +463,13 @@ fun SettingsContent(
                   Icon(
                     imageVector = Icons.Rounded.Download,
                     contentDescription = null,
-                    tint = VlcOrange,
+                    tint = TextPrimary,
                     modifier = Modifier.size(18.dp)
                   )
                   Spacer(modifier = Modifier.width(8.dp))
                   Text(
                     text = stringResource(R.string.settings_export_mal_xml),
-                    color = VlcOrange,
+                    color = TextPrimary,
                     style = MaterialTheme.typography.labelLarge
                   )
                 }
@@ -470,11 +481,14 @@ fun SettingsContent(
               }
             }
 
+            item { HorizontalDivider(color = ObsidianDivider) }
+
             item {
               SettingsSectionCard(title = stringResource(R.string.settings_storage_section)) {
                 OutlinedButton(
                   onClick = onOpenGuide,
-                  shape = RoundedCornerShape(12.dp),
+                  shape = AnimePlayRoleShapes.Button,
+                  border = BorderStroke(1.dp, ObsidianBorder),
                   modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
@@ -482,34 +496,36 @@ fun SettingsContent(
                   Icon(
                     imageVector = Icons.AutoMirrored.Rounded.HelpOutline,
                     contentDescription = null,
-                    tint = VlcOrange,
+                    tint = TextPrimary,
                     modifier = Modifier.size(18.dp)
                   )
                   Spacer(modifier = Modifier.width(8.dp))
                   Text(
                     text = stringResource(R.string.settings_open_guide_button),
-                    color = VlcOrange,
+                    color = TextPrimary,
                     style = MaterialTheme.typography.labelLarge
                   )
                 }
 
                 OutlinedButton(
                   onClick = { viewModel.clearThumbnailCache(cacheClearedMsg) },
-                  shape = RoundedCornerShape(12.dp),
+                  shape = AnimePlayRoleShapes.Button,
+                  border = BorderStroke(1.dp, ObsidianBorder),
                   modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
                 ) {
                   Text(
                     text = stringResource(R.string.settings_clear_cache),
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = TextPrimary,
                     style = MaterialTheme.typography.labelLarge
                   )
                 }
 
                 OutlinedButton(
                   onClick = { showResetConfirm = true },
-                  shape = RoundedCornerShape(12.dp),
+                  shape = AnimePlayRoleShapes.Button,
+                  border = BorderStroke(1.dp, ObsidianBorder),
                   modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
@@ -545,7 +561,7 @@ fun SettingsContent(
                   selectedValue = state.settings.defaultPlaybackSpeed,
                   onSelect = viewModel::setDefaultPlaybackSpeed
                 )
-                HorizontalDivider(color = ObsidianBorder)
+                HorizontalDivider(color = ObsidianDivider)
                 SettingsChipGroup(
                   title = stringResource(R.string.settings_seek_jump),
                   options = listOf(5, 10, 15, 30).map {
@@ -554,7 +570,7 @@ fun SettingsContent(
                   selectedValue = state.settings.seekJumpSeconds,
                   onSelect = viewModel::setSeekJumpSeconds
                 )
-                HorizontalDivider(color = ObsidianBorder)
+                HorizontalDivider(color = ObsidianDivider)
                 SettingsChipGroup(
                   title = stringResource(R.string.settings_autohide_delay),
                   options = listOf(
@@ -566,7 +582,7 @@ fun SettingsContent(
                   selectedValue = state.settings.controlsAutoHideSeconds,
                   onSelect = viewModel::setControlsAutoHideSeconds
                 )
-                HorizontalDivider(color = ObsidianBorder)
+                HorizontalDivider(color = ObsidianDivider)
                 SettingsChipGroup(
                   title = stringResource(R.string.settings_skip_op_duration),
                   options = listOf(75, 85, 90).map {
@@ -575,56 +591,56 @@ fun SettingsContent(
                   selectedValue = state.settings.skipIntroDurationSeconds,
                   onSelect = viewModel::setSkipIntroDurationSeconds
                 )
-                HorizontalDivider(color = ObsidianBorder)
+                HorizontalDivider(color = ObsidianDivider)
                 SettingsToggleRow(
                   title = stringResource(R.string.settings_gestures_toggle),
                   subtitle = stringResource(R.string.settings_gestures_desc),
                   checked = state.settings.enableBrightnessVolumeGestures,
                   onCheckedChange = viewModel::setEnableBrightnessVolumeGestures
                 )
-                HorizontalDivider(color = ObsidianBorder)
+                HorizontalDivider(color = ObsidianDivider)
                 SettingsToggleRow(
                   title = stringResource(R.string.settings_horizontal_seek),
                   subtitle = stringResource(R.string.settings_horizontal_seek_desc),
                   checked = state.settings.enableHorizontalSwipeSeek,
                   onCheckedChange = viewModel::setEnableHorizontalSwipeSeek
                 )
-                HorizontalDivider(color = ObsidianBorder)
+                HorizontalDivider(color = ObsidianDivider)
                 SettingsToggleRow(
                   title = stringResource(R.string.settings_double_tap_toggle),
                   subtitle = stringResource(R.string.settings_double_tap_desc),
                   checked = state.settings.enableDoubleTapSeek,
                   onCheckedChange = viewModel::setEnableDoubleTapSeek
                 )
-                HorizontalDivider(color = ObsidianBorder)
+                HorizontalDivider(color = ObsidianDivider)
                 SettingsToggleRow(
                   title = stringResource(R.string.settings_auto_scan_intro),
                   subtitle = stringResource(R.string.settings_auto_scan_intro_desc),
                   checked = state.settings.autoScanIntroOutro,
                   onCheckedChange = viewModel::setAutoScanIntroOutro
                 )
-                HorizontalDivider(color = ObsidianBorder)
+                HorizontalDivider(color = ObsidianDivider)
                 SettingsToggleRow(
                   title = stringResource(R.string.settings_auto_skip_intro),
                   subtitle = stringResource(R.string.settings_auto_skip_intro_desc),
                   checked = state.settings.autoSkipIntro,
                   onCheckedChange = viewModel::setAutoSkipIntro
                 )
-                HorizontalDivider(color = ObsidianBorder)
+                HorizontalDivider(color = ObsidianDivider)
                 SettingsToggleRow(
                   title = stringResource(R.string.settings_auto_skip_outro),
                   subtitle = stringResource(R.string.settings_auto_skip_outro_desc),
                   checked = state.settings.autoSkipOutro,
                   onCheckedChange = viewModel::setAutoSkipOutro
                 )
-                HorizontalDivider(color = ObsidianBorder)
+                HorizontalDivider(color = ObsidianDivider)
                 SettingsToggleRow(
                   title = stringResource(R.string.settings_clock_battery),
                   subtitle = stringResource(R.string.settings_clock_battery_desc),
                   checked = state.settings.showClockAndBatteryInPlayer,
                   onCheckedChange = viewModel::setShowClockAndBatteryInPlayer
                 )
-                HorizontalDivider(color = ObsidianBorder)
+                HorizontalDivider(color = ObsidianDivider)
                 SettingsChipGroup(
                   title = stringResource(R.string.player_repeat_mode_title),
                   options = listOf(
@@ -635,14 +651,14 @@ fun SettingsContent(
                   selectedValue = state.settings.defaultRepeatMode,
                   onSelect = viewModel::setDefaultRepeatMode
                 )
-                HorizontalDivider(color = ObsidianBorder)
+                HorizontalDivider(color = ObsidianDivider)
                 SettingsToggleRow(
                   title = stringResource(R.string.settings_autoplay_next),
                   subtitle = stringResource(R.string.settings_autoplay_next_desc),
                   checked = state.settings.autoPlayNextEpisode,
                   onCheckedChange = viewModel::setAutoPlayNextEpisode
                 )
-                HorizontalDivider(color = ObsidianBorder)
+                HorizontalDivider(color = ObsidianDivider)
                 SettingsChipGroup(
                   title = stringResource(R.string.settings_watched_threshold),
                   options = thresholdChoices.map {
@@ -668,24 +684,25 @@ fun SettingsContent(
                   selectedValue = state.settings.bufferProfile,
                   onSelect = viewModel::setBufferProfile
                 )
-                HorizontalDivider(color = ObsidianBorder)
+                HorizontalDivider(color = ObsidianDivider)
                 SettingsToggleRow(
                   title = stringResource(R.string.settings_save_history),
                   subtitle = stringResource(R.string.settings_save_history_desc),
                   checked = state.settings.saveWatchHistory,
                   onCheckedChange = viewModel::setSaveWatchHistory
                 )
-                HorizontalDivider(color = ObsidianBorder)
+                HorizontalDivider(color = ObsidianDivider)
                 OutlinedButton(
                   onClick = { viewModel.resetPlaybackDefaults(vlcResetMsg) },
-                  shape = RoundedCornerShape(12.dp),
+                  shape = AnimePlayRoleShapes.Button,
+                  border = BorderStroke(1.dp, ObsidianBorder),
                   modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
                 ) {
                   Text(
                     text = stringResource(R.string.settings_reset_vlc_defaults),
-                    color = VlcOrange,
+                    color = TextPrimary,
                     style = MaterialTheme.typography.labelLarge
                   )
                 }
@@ -705,6 +722,7 @@ fun SettingsContent(
   if (showResetConfirm) {
     AlertDialog(
       onDismissRequest = { showResetConfirm = false },
+      shape = AnimePlayRoleShapes.Dialog,
       containerColor = ObsidianSurface,
       title = {
         Text(
@@ -725,6 +743,7 @@ fun SettingsContent(
             viewModel.resetWatchStatistics(statsResetMsg)
             showResetConfirm = false
           },
+          shape = AnimePlayRoleShapes.Button,
           colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.error,
             contentColor = MaterialTheme.colorScheme.onError
@@ -734,7 +753,10 @@ fun SettingsContent(
         }
       },
       dismissButton = {
-        TextButton(onClick = { showResetConfirm = false }) {
+        TextButton(
+          onClick = { showResetConfirm = false },
+          shape = AnimePlayRoleShapes.Button
+        ) {
           Text(stringResource(R.string.action_cancel), color = SecondaryGray)
         }
       }

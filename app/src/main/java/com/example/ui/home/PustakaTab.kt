@@ -1,8 +1,8 @@
 package com.example.ui.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -25,8 +24,6 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.automirrored.rounded.Sort
@@ -38,7 +35,6 @@ import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarOutline
-import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -46,6 +42,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -53,7 +50,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -65,7 +61,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
@@ -77,14 +72,16 @@ import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.data.local.entity.AnimeWithStats
 import com.example.ui.components.VideoThumbnail
+import com.example.ui.theme.AnimePlayRoleShapes
 import com.example.ui.theme.ObsidianBackground
 import com.example.ui.theme.ObsidianBorder
+import com.example.ui.theme.ObsidianDivider
 import com.example.ui.theme.ObsidianSurface
 import com.example.ui.theme.ObsidianSurfaceElevated
 import com.example.ui.theme.OnPrimaryBlack
 import com.example.ui.theme.SecondaryGray
+import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.VlcOrange
-import com.example.ui.theme.VlcOrangeSoft
 import com.example.util.scaleOnPress
 import java.util.Locale
 
@@ -119,21 +116,36 @@ fun PustakaTab(
   val columns = if (state.isListViewMode) {
     GridCells.Fixed(1)
   } else {
-    GridCells.Adaptive(minSize = 156.dp)
+    GridCells.Adaptive(minSize = 152.dp)
   }
+
+  val neutralChipColors = FilterChipDefaults.filterChipColors(
+    selectedContainerColor = TextPrimary,
+    selectedLabelColor = OnPrimaryBlack,
+    selectedLeadingIconColor = OnPrimaryBlack,
+    selectedTrailingIconColor = OnPrimaryBlack,
+    containerColor = ObsidianSurfaceElevated,
+    labelColor = SecondaryGray,
+    iconColor = SecondaryGray
+  )
+  val neutralChipBorder = FilterChipDefaults.filterChipBorder(
+    enabled = true,
+    selected = false,
+    borderColor = Color.Transparent,
+    selectedBorderColor = Color.Transparent
+  )
 
   Column(
     modifier = Modifier
       .fillMaxSize()
       .testTag("pustaka_tab")
   ) {
-    // Top Search + Sort + Grid/List Controls
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .background(ObsidianSurface.copy(alpha = 0.65f))
+        .background(ObsidianBackground)
         .padding(horizontal = 16.dp, vertical = 10.dp),
-      verticalArrangement = Arrangement.spacedBy(8.dp)
+      verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
       Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -153,7 +165,7 @@ fun PustakaTab(
             Icon(
               imageVector = Icons.Rounded.Search,
               contentDescription = null,
-              tint = VlcOrange
+              tint = SecondaryGray
             )
           },
           trailingIcon = {
@@ -168,13 +180,13 @@ fun PustakaTab(
             }
           },
           singleLine = true,
-          shape = RoundedCornerShape(14.dp),
+          shape = AnimePlayRoleShapes.Input,
           colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = VlcOrange,
+            focusedBorderColor = TextPrimary,
             unfocusedBorderColor = ObsidianBorder,
             focusedContainerColor = ObsidianSurface,
             unfocusedContainerColor = ObsidianSurface,
-            cursorColor = VlcOrange
+            cursorColor = TextPrimary
           ),
           modifier = Modifier
             .weight(1f)
@@ -186,14 +198,13 @@ fun PustakaTab(
             onClick = { showSortMenu = true },
             modifier = Modifier
               .size(48.dp)
-              .clip(RoundedCornerShape(12.dp))
+              .clip(AnimePlayRoleShapes.Button)
               .background(ObsidianSurface)
-              .border(1.dp, ObsidianBorder, RoundedCornerShape(12.dp))
           ) {
             Icon(
               imageVector = Icons.AutoMirrored.Rounded.Sort,
-              contentDescription = null,
-              tint = VlcOrange
+              contentDescription = stringResource(R.string.library_sort_recent),
+              tint = TextPrimary
             )
           }
           DropdownMenu(
@@ -212,7 +223,7 @@ fun PustakaTab(
                 text = {
                   Text(
                     text = stringResource(labelRes),
-                    color = if (state.sortOption == option) VlcOrange else MaterialTheme.colorScheme.onSurface
+                    color = if (state.sortOption == option) TextPrimary else SecondaryGray
                   )
                 },
                 onClick = {
@@ -228,14 +239,13 @@ fun PustakaTab(
           onClick = onToggleViewMode,
           modifier = Modifier
             .size(48.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(AnimePlayRoleShapes.Button)
             .background(ObsidianSurface)
-            .border(1.dp, ObsidianBorder, RoundedCornerShape(12.dp))
         ) {
           Icon(
             imageVector = if (state.isListViewMode) Icons.Rounded.GridView else Icons.AutoMirrored.Rounded.ViewList,
             contentDescription = stringResource(R.string.library_toggle_view),
-            tint = MaterialTheme.colorScheme.onSurface
+            tint = TextPrimary
           )
         }
       }
@@ -245,6 +255,8 @@ fun PustakaTab(
           FilterChip(
             selected = state.favoritesOnly,
             onClick = onToggleFavoritesOnly,
+            shape = AnimePlayRoleShapes.Chip,
+            border = neutralChipBorder,
             leadingIcon = {
               Icon(
                 imageVector = Icons.Rounded.Star,
@@ -258,14 +270,7 @@ fun PustakaTab(
                 style = MaterialTheme.typography.labelSmall
               )
             },
-            colors = FilterChipDefaults.filterChipColors(
-              selectedContainerColor = VlcOrange,
-              selectedLabelColor = OnPrimaryBlack,
-              selectedLeadingIconColor = OnPrimaryBlack,
-              containerColor = ObsidianSurfaceElevated,
-              labelColor = SecondaryGray,
-              iconColor = VlcOrange
-            )
+            colors = neutralChipColors
           )
         }
         item {
@@ -275,49 +280,39 @@ fun PustakaTab(
               state.selectedPlaylistId == null &&
               !state.favoritesOnly,
             onClick = onClearAllFilters,
+            shape = AnimePlayRoleShapes.Chip,
+            border = neutralChipBorder,
             label = {
               Text(
                 text = stringResource(R.string.home_filter_all_genres),
                 style = MaterialTheme.typography.labelSmall
               )
             },
-            colors = FilterChipDefaults.filterChipColors(
-              selectedContainerColor = VlcOrange,
-              selectedLabelColor = OnPrimaryBlack,
-              containerColor = ObsidianSurfaceElevated,
-              labelColor = SecondaryGray
-            )
+            colors = neutralChipColors
           )
         }
         items(state.availableGenres) { genre ->
           FilterChip(
             selected = state.selectedGenre == genre,
             onClick = { onSelectGenre(genre) },
+            shape = AnimePlayRoleShapes.Chip,
+            border = neutralChipBorder,
             label = { Text(text = genre, style = MaterialTheme.typography.labelSmall) },
-            colors = FilterChipDefaults.filterChipColors(
-              selectedContainerColor = VlcOrange,
-              selectedLabelColor = OnPrimaryBlack,
-              containerColor = ObsidianSurfaceElevated,
-              labelColor = SecondaryGray
-            )
+            colors = neutralChipColors
           )
         }
         items(state.availableYears) { year ->
           FilterChip(
             selected = state.selectedYear == year,
             onClick = { onSelectYear(year) },
+            shape = AnimePlayRoleShapes.Chip,
+            border = neutralChipBorder,
             label = { Text(text = year.toString(), style = MaterialTheme.typography.labelSmall) },
-            colors = FilterChipDefaults.filterChipColors(
-              selectedContainerColor = VlcOrange,
-              selectedLabelColor = OnPrimaryBlack,
-              containerColor = ObsidianSurfaceElevated,
-              labelColor = SecondaryGray
-            )
+            colors = neutralChipColors
           )
         }
       }
 
-      // Custom Playlists filter & creation row
       LazyRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -326,6 +321,8 @@ fun PustakaTab(
           FilterChip(
             selected = false,
             onClick = { showCreatePlaylistDialog = true },
+            shape = AnimePlayRoleShapes.Chip,
+            border = neutralChipBorder,
             leadingIcon = {
               Icon(
                 imageVector = Icons.Rounded.Add,
@@ -339,11 +336,7 @@ fun PustakaTab(
                 style = MaterialTheme.typography.labelSmall
               )
             },
-            colors = FilterChipDefaults.filterChipColors(
-              containerColor = VlcOrangeSoft,
-              labelColor = VlcOrange,
-              iconColor = VlcOrange
-            ),
+            colors = neutralChipColors,
             modifier = Modifier.testTag("create_playlist_chip")
           )
         }
@@ -352,6 +345,8 @@ fun PustakaTab(
           FilterChip(
             selected = isSelected,
             onClick = { onSelectPlaylist(playlist.id) },
+            shape = AnimePlayRoleShapes.Chip,
+            border = neutralChipBorder,
             leadingIcon = {
               Icon(
                 imageVector = Icons.AutoMirrored.Rounded.PlaylistPlay,
@@ -378,25 +373,19 @@ fun PustakaTab(
                 style = MaterialTheme.typography.labelSmall
               )
             },
-            colors = FilterChipDefaults.filterChipColors(
-              selectedContainerColor = VlcOrange,
-              selectedLabelColor = OnPrimaryBlack,
-              selectedLeadingIconColor = OnPrimaryBlack,
-              selectedTrailingIconColor = OnPrimaryBlack,
-              containerColor = ObsidianSurfaceElevated,
-              labelColor = SecondaryGray,
-              iconColor = VlcOrange
-            )
+            colors = neutralChipColors
           )
         }
       }
     }
 
+    HorizontalDivider(color = ObsidianDivider)
+
     LazyVerticalGrid(
       columns = columns,
-      contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 28.dp),
+      contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp),
       horizontalArrangement = Arrangement.spacedBy(12.dp),
-      verticalArrangement = Arrangement.spacedBy(14.dp),
+      verticalArrangement = Arrangement.spacedBy(20.dp),
       modifier = Modifier
         .fillMaxSize()
         .testTag("anime_grid")
@@ -451,10 +440,12 @@ private fun CreatePlaylistDialog(
   AlertDialog(
     onDismissRequest = onDismiss,
     containerColor = ObsidianSurface,
+    shape = AnimePlayRoleShapes.Dialog,
     title = {
       Text(
         text = stringResource(R.string.playlist_create_title),
-        style = MaterialTheme.typography.titleLarge
+        style = MaterialTheme.typography.titleLarge,
+        color = TextPrimary
       )
     },
     text = {
@@ -463,6 +454,7 @@ private fun CreatePlaylistDialog(
         onValueChange = { name = it },
         placeholder = { Text(stringResource(R.string.playlist_name_hint)) },
         singleLine = true,
+        shape = AnimePlayRoleShapes.Input,
         modifier = Modifier.fillMaxWidth()
       )
     },
@@ -473,8 +465,9 @@ private fun CreatePlaylistDialog(
           if (clean.isNotBlank()) onCreate(clean)
         },
         enabled = name.isNotBlank(),
+        shape = AnimePlayRoleShapes.Button,
         colors = ButtonDefaults.buttonColors(
-          containerColor = VlcOrange,
+          containerColor = TextPrimary,
           contentColor = OnPrimaryBlack
         )
       ) {
@@ -502,95 +495,75 @@ private fun AnimeGridCard(
     0f
   }
 
-  Surface(
-    color = ObsidianSurface,
-    shape = RoundedCornerShape(16.dp),
+  Column(
     modifier = Modifier
       .fillMaxWidth()
       .scaleOnPress(interaction)
-      .border(1.dp, ObsidianBorder, RoundedCornerShape(16.dp))
-      .clip(RoundedCornerShape(16.dp))
       .clickable(interactionSource = interaction, indication = null, onClick = onClick)
-      .testTag("anime_card_${item.anime.id}")
+      .testTag("anime_card_${item.anime.id}"),
+    verticalArrangement = Arrangement.spacedBy(8.dp)
   ) {
-    Column {
-      Box(
-        modifier = Modifier
-          .fillMaxWidth()
-          .aspectRatio(4f / 3f)
-      ) {
-        VideoThumbnail(
-          uri = item.anime.effectiveCoverUri,
-          contentDescription = stringResource(R.string.cd_anime_thumbnail, item.anime.title),
-          modifier = Modifier.fillMaxSize(),
-          targetWidthPx = 420,
-          targetHeightPx = 315
-        )
-        Box(
-          modifier = Modifier
-            .fillMaxSize()
-            .background(
-              Brush.verticalGradient(
-                colors = listOf(Color.Transparent, ObsidianBackground.copy(alpha = 0.72f))
-              )
-            )
-        )
-        Surface(
-          color = ObsidianBackground.copy(alpha = 0.85f),
-          shape = RoundedCornerShape(8.dp),
-          modifier = Modifier
-            .align(Alignment.TopEnd)
-            .padding(8.dp)
-        ) {
-          Text(
-            text = stringResource(R.string.home_episode_count, item.anime.episodeCount),
-            style = MaterialTheme.typography.labelSmall,
-            color = VlcOrange,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-          )
-        }
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .aspectRatio(2f / 3f)
+        .clip(AnimePlayRoleShapes.Poster)
+    ) {
+      VideoThumbnail(
+        uri = item.anime.effectiveCoverUri,
+        contentDescription = stringResource(R.string.cd_anime_thumbnail, item.anime.title),
+        modifier = Modifier.fillMaxSize(),
+        targetWidthPx = 360,
+        targetHeightPx = 540
+      )
 
-        IconButton(
-          onClick = onToggleFavorite,
+      Text(
+        text = stringResource(R.string.home_episode_count, item.anime.episodeCount),
+        style = MaterialTheme.typography.labelSmall,
+        color = TextPrimary,
+        modifier = Modifier
+          .align(Alignment.TopEnd)
+          .padding(8.dp)
+          .background(Color.Black.copy(alpha = 0.68f), AnimePlayRoleShapes.Poster)
+          .padding(horizontal = 8.dp, vertical = 4.dp)
+      )
+
+      IconButton(
+        onClick = onToggleFavorite,
+        modifier = Modifier
+          .align(Alignment.BottomEnd)
+          .minimumInteractiveComponentSize()
+      ) {
+        Icon(
+          imageVector = if (item.anime.isFavorite) Icons.Rounded.Star else Icons.Rounded.StarOutline,
+          contentDescription = stringResource(
+            if (item.anime.isFavorite) R.string.detail_favorite_remove else R.string.detail_favorite_add
+          ),
+          tint = if (item.anime.isFavorite) VlcOrange else TextPrimary
+        )
+      }
+
+      item.anime.malScore?.let { score ->
+        Row(
           modifier = Modifier
-            .align(Alignment.BottomEnd)
-            .minimumInteractiveComponentSize()
+            .align(Alignment.TopStart)
+            .padding(8.dp)
+            .background(Color.Black.copy(alpha = 0.68f), AnimePlayRoleShapes.Poster)
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(3.dp)
         ) {
           Icon(
-            imageVector = if (item.anime.isFavorite) Icons.Rounded.Star else Icons.Rounded.StarOutline,
-            contentDescription = stringResource(
-              if (item.anime.isFavorite) R.string.detail_favorite_remove else R.string.detail_favorite_add
-            ),
-            tint = if (item.anime.isFavorite) VlcOrange else MaterialTheme.colorScheme.onBackground
+            imageVector = Icons.Rounded.Star,
+            contentDescription = null,
+            tint = TextPrimary,
+            modifier = Modifier.size(12.dp)
           )
-        }
-
-        item.anime.malScore?.let { score ->
-          Surface(
-            color = ObsidianBackground.copy(alpha = 0.85f),
-            shape = RoundedCornerShape(8.dp),
-            modifier = Modifier
-              .align(Alignment.TopStart)
-              .padding(8.dp)
-          ) {
-            Row(
-              modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(3.dp)
-            ) {
-              Icon(
-                imageVector = Icons.Rounded.Star,
-                contentDescription = null,
-                tint = VlcOrange,
-                modifier = Modifier.size(12.dp)
-              )
-              Text(
-                text = String.format(Locale.US, "%.1f", score),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onBackground
-              )
-            }
-          }
+          Text(
+            text = String.format(Locale.US, "%.1f", score),
+            style = MaterialTheme.typography.labelSmall,
+            color = TextPrimary
+          )
         }
       }
 
@@ -600,35 +573,33 @@ private fun AnimeGridCard(
           color = VlcOrange,
           trackColor = ObsidianSurfaceElevated,
           modifier = Modifier
+            .align(Alignment.BottomCenter)
             .fillMaxWidth()
             .height(3.dp)
         )
       }
+    }
 
-      Column(
-        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-      ) {
-        Text(
-          text = item.anime.title,
-          style = MaterialTheme.typography.titleMedium,
-          color = MaterialTheme.colorScheme.onSurface,
-          maxLines = 2,
-          overflow = TextOverflow.Ellipsis
-        )
-        val metaText = buildString {
-          append(item.anime.genre)
-          val dateText = item.anime.releaseDate.ifBlank { item.anime.releaseYear?.toString().orEmpty() }
-          if (dateText.isNotBlank()) append(" • $dateText")
-        }
-        Text(
-          text = metaText,
-          style = MaterialTheme.typography.labelSmall,
-          color = SecondaryGray,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+      Text(
+        text = item.anime.title,
+        style = MaterialTheme.typography.titleMedium,
+        color = TextPrimary,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis
+      )
+      val metaText = buildString {
+        append(item.anime.genre)
+        val dateText = item.anime.releaseDate.ifBlank { item.anime.releaseYear?.toString().orEmpty() }
+        if (dateText.isNotBlank()) append(" • $dateText")
       }
+      Text(
+        text = metaText,
+        style = MaterialTheme.typography.labelSmall,
+        color = SecondaryGray,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+      )
     }
   }
 }
@@ -640,68 +611,61 @@ private fun AnimeListRowCard(
   onToggleFavorite: () -> Unit
 ) {
   val interaction = remember { MutableInteractionSource() }
-  Surface(
-    color = ObsidianSurface,
-    shape = RoundedCornerShape(14.dp),
+  Row(
     modifier = Modifier
       .fillMaxWidth()
       .scaleOnPress(interaction)
-      .border(1.dp, ObsidianBorder, RoundedCornerShape(14.dp))
-      .clip(RoundedCornerShape(14.dp))
       .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+      .padding(vertical = 6.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(12.dp)
   ) {
-    Row(
-      modifier = Modifier.padding(10.dp),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.spacedBy(12.dp)
+    VideoThumbnail(
+      uri = item.anime.effectiveCoverUri,
+      contentDescription = stringResource(R.string.cd_anime_thumbnail, item.anime.title),
+      modifier = Modifier
+        .size(width = 64.dp, height = 92.dp)
+        .clip(AnimePlayRoleShapes.Poster),
+      targetWidthPx = 200,
+      targetHeightPx = 300
+    )
+    Column(
+      modifier = Modifier.weight(1f),
+      verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-      VideoThumbnail(
-        uri = item.anime.effectiveCoverUri,
-        contentDescription = stringResource(R.string.cd_anime_thumbnail, item.anime.title),
-        modifier = Modifier
-          .size(width = 96.dp, height = 72.dp)
-          .clip(RoundedCornerShape(10.dp)),
-        targetWidthPx = 280,
-        targetHeightPx = 210
+      Text(
+        text = item.anime.title,
+        style = MaterialTheme.typography.titleMedium,
+        color = TextPrimary,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis
       )
-      Column(
-        modifier = Modifier.weight(1f),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-      ) {
+      Text(
+        text = "${item.anime.genre} • ${stringResource(R.string.home_watched_progress, item.watchedCount, item.anime.episodeCount)}",
+        style = MaterialTheme.typography.labelSmall,
+        color = SecondaryGray,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+      )
+      item.anime.malScore?.let { sc ->
         Text(
-          text = item.anime.title,
-          style = MaterialTheme.typography.titleMedium,
-          color = MaterialTheme.colorScheme.onSurface,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis
-        )
-        Text(
-          text = "${item.anime.genre} • ${stringResource(R.string.home_watched_progress, item.watchedCount, item.anime.episodeCount)}",
+          text = stringResource(R.string.mal_score_badge, sc),
           style = MaterialTheme.typography.labelSmall,
-          color = SecondaryGray,
-          maxLines = 1,
-          overflow = TextOverflow.Ellipsis
-        )
-        item.anime.malScore?.let { sc ->
-          Text(
-            text = stringResource(R.string.mal_score_badge, sc),
-            style = MaterialTheme.typography.labelSmall,
-            color = VlcOrange
-          )
-        }
-      }
-      IconButton(
-        onClick = onToggleFavorite,
-        modifier = Modifier.minimumInteractiveComponentSize()
-      ) {
-        Icon(
-          imageVector = if (item.anime.isFavorite) Icons.Rounded.Star else Icons.Rounded.StarOutline,
-          contentDescription = stringResource(
-            if (item.anime.isFavorite) R.string.detail_favorite_remove else R.string.detail_favorite_add
-          ),
-          tint = if (item.anime.isFavorite) VlcOrange else SecondaryGray
+          color = SecondaryGray
         )
       }
+    }
+    IconButton(
+      onClick = onToggleFavorite,
+      modifier = Modifier.minimumInteractiveComponentSize()
+    ) {
+      Icon(
+        imageVector = if (item.anime.isFavorite) Icons.Rounded.Star else Icons.Rounded.StarOutline,
+        contentDescription = stringResource(
+          if (item.anime.isFavorite) R.string.detail_favorite_remove else R.string.detail_favorite_add
+        ),
+        tint = if (item.anime.isFavorite) VlcOrange else SecondaryGray
+      )
     }
   }
 }
@@ -719,42 +683,21 @@ fun EmptyLibraryState(
   Box(
     modifier = Modifier
       .fillMaxWidth()
-      .padding(vertical = 20.dp, horizontal = 12.dp),
+      .padding(vertical = 24.dp, horizontal = 12.dp),
     contentAlignment = Alignment.Center
   ) {
     Column(
       modifier = Modifier.widthIn(max = 380.dp),
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
-      Box(
+      Image(
+        painter = painterResource(id = R.drawable.img_empty_cinema),
+        contentDescription = stringResource(R.string.cd_empty_illustration),
+        contentScale = ContentScale.Crop,
         modifier = Modifier
           .size(136.dp)
-          .clip(RoundedCornerShape(24.dp))
-          .border(1.dp, ObsidianBorder, RoundedCornerShape(24.dp))
-      ) {
-        Image(
-          painter = painterResource(id = R.drawable.img_empty_cinema),
-          contentDescription = stringResource(R.string.cd_empty_illustration),
-          contentScale = ContentScale.Crop,
-          modifier = Modifier.fillMaxSize()
-        )
-        Box(
-          modifier = Modifier
-            .align(Alignment.BottomEnd)
-            .padding(10.dp)
-            .size(36.dp)
-            .clip(CircleShape)
-            .background(VlcOrangeSoft),
-          contentAlignment = Alignment.Center
-        ) {
-          Icon(
-            imageVector = Icons.Rounded.VideoLibrary,
-            contentDescription = null,
-            tint = VlcOrange,
-            modifier = Modifier.size(18.dp)
-          )
-        }
-      }
+          .clip(AnimePlayRoleShapes.Poster)
+      )
 
       Spacer(modifier = Modifier.height(16.dp))
 
@@ -765,7 +708,7 @@ fun EmptyLibraryState(
           else -> stringResource(R.string.home_empty_title)
         },
         style = MaterialTheme.typography.titleLarge,
-        color = MaterialTheme.colorScheme.onBackground,
+        color = TextPrimary,
         textAlign = TextAlign.Center
       )
 
@@ -782,21 +725,22 @@ fun EmptyLibraryState(
         textAlign = TextAlign.Center
       )
 
-      Spacer(modifier = Modifier.height(16.dp))
+      Spacer(modifier = Modifier.height(20.dp))
 
       Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         if (!isFiltered) {
           OutlinedButton(
             onClick = onOpenSettings,
             interactionSource = settingsInteraction,
-            shape = RoundedCornerShape(14.dp),
+            shape = AnimePlayRoleShapes.Button,
+            border = BorderStroke(1.dp, ObsidianBorder),
             modifier = Modifier
               .height(48.dp)
               .scaleOnPress(settingsInteraction)
           ) {
             Text(
               text = stringResource(R.string.home_open_settings),
-              color = VlcOrange,
+              color = TextPrimary,
               style = MaterialTheme.typography.labelLarge
             )
           }
@@ -805,10 +749,10 @@ fun EmptyLibraryState(
           onClick = if (isFiltered) onClearSearch else onRefresh,
           interactionSource = buttonInteraction,
           colors = ButtonDefaults.buttonColors(
-            containerColor = VlcOrange,
+            containerColor = TextPrimary,
             contentColor = OnPrimaryBlack
           ),
-          shape = RoundedCornerShape(14.dp),
+          shape = AnimePlayRoleShapes.Button,
           modifier = Modifier
             .height(48.dp)
             .scaleOnPress(buttonInteraction)
@@ -825,3 +769,4 @@ fun EmptyLibraryState(
     }
   }
 }
+

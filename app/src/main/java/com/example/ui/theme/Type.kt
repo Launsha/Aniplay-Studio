@@ -8,88 +8,87 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.R
 
-val PlusJakartaSansFamily = FontFamily(
-  Font(R.font.plus_jakarta_sans, FontWeight.Normal),
-  Font(R.font.plus_jakarta_sans, FontWeight.Medium),
-  Font(R.font.plus_jakarta_sans, FontWeight.SemiBold),
-  Font(R.font.plus_jakarta_sans, FontWeight.Bold)
+val BricolageGrotesqueFamily = FontFamily(
+  Font(R.font.bricolage_grotesque, FontWeight.Medium),
+  Font(R.font.bricolage_grotesque, FontWeight.SemiBold),
+  Font(R.font.bricolage_grotesque, FontWeight.Bold)
 )
 
-val SpaceGroteskFamily = FontFamily(
-  Font(R.font.space_grotesk, FontWeight.Medium),
-  Font(R.font.space_grotesk, FontWeight.SemiBold),
-  Font(R.font.space_grotesk, FontWeight.Bold)
+val InstrumentSansFamily = FontFamily(
+  Font(R.font.instrument_sans, FontWeight.Normal),
+  Font(R.font.instrument_sans, FontWeight.Medium),
+  Font(R.font.instrument_sans, FontWeight.SemiBold)
 )
 
 val AnimePlayTypography = Typography(
   headlineMedium = TextStyle(
-    fontFamily = SpaceGroteskFamily,
-    fontWeight = FontWeight.Bold,
+    fontFamily = BricolageGrotesqueFamily,
+    fontWeight = FontWeight.SemiBold,
     fontSize = 24.sp,
     lineHeight = 30.sp,
-    letterSpacing = (-0.25).sp
+    letterSpacing = (-0.2).sp
   ),
   titleLarge = TextStyle(
-    fontFamily = SpaceGroteskFamily,
+    fontFamily = BricolageGrotesqueFamily,
     fontWeight = FontWeight.SemiBold,
     fontSize = 20.sp,
     lineHeight = 26.sp,
     letterSpacing = 0.sp
   ),
   titleMedium = TextStyle(
-    fontFamily = PlusJakartaSansFamily,
+    fontFamily = BricolageGrotesqueFamily,
     fontWeight = FontWeight.SemiBold,
-    fontSize = 16.sp,
-    lineHeight = 22.sp,
-    letterSpacing = 0.1.sp
+    fontSize = 17.sp,
+    lineHeight = 23.sp,
+    letterSpacing = 0.sp
   ),
   titleSmall = TextStyle(
-    fontFamily = PlusJakartaSansFamily,
+    fontFamily = BricolageGrotesqueFamily,
     fontWeight = FontWeight.SemiBold,
-    fontSize = 14.sp,
+    fontSize = 15.sp,
     lineHeight = 20.sp,
-    letterSpacing = 0.1.sp
+    letterSpacing = 0.sp
   ),
   bodyLarge = TextStyle(
-    fontFamily = PlusJakartaSansFamily,
+    fontFamily = InstrumentSansFamily,
     fontWeight = FontWeight.Normal,
     fontSize = 15.sp,
     lineHeight = 22.sp,
-    letterSpacing = 0.15.sp
+    letterSpacing = 0.1.sp
   ),
   bodyMedium = TextStyle(
-    fontFamily = PlusJakartaSansFamily,
+    fontFamily = InstrumentSansFamily,
     fontWeight = FontWeight.Normal,
     fontSize = 14.sp,
     lineHeight = 20.sp,
-    letterSpacing = 0.2.sp
+    letterSpacing = 0.15.sp
   ),
   bodySmall = TextStyle(
-    fontFamily = PlusJakartaSansFamily,
+    fontFamily = InstrumentSansFamily,
     fontWeight = FontWeight.Normal,
     fontSize = 12.sp,
-    lineHeight = 16.sp,
-    letterSpacing = 0.25.sp
+    lineHeight = 17.sp,
+    letterSpacing = 0.2.sp
   ),
   labelLarge = TextStyle(
-    fontFamily = SpaceGroteskFamily,
+    fontFamily = InstrumentSansFamily,
     fontWeight = FontWeight.SemiBold,
     fontSize = 14.sp,
     lineHeight = 18.sp,
     letterSpacing = 0.1.sp
   ),
   labelMedium = TextStyle(
-    fontFamily = SpaceGroteskFamily,
+    fontFamily = InstrumentSansFamily,
     fontWeight = FontWeight.Medium,
     fontSize = 12.sp,
     lineHeight = 16.sp,
-    letterSpacing = 0.4.sp
+    letterSpacing = 0.15.sp
   ),
   labelSmall = TextStyle(
-    fontFamily = SpaceGroteskFamily,
+    fontFamily = InstrumentSansFamily,
     fontWeight = FontWeight.Medium,
     fontSize = 11.sp,
     lineHeight = 14.sp,
-    letterSpacing = 0.4.sp
+    letterSpacing = 0.2.sp
   )
 )

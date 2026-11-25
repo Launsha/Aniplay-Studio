@@ -22,8 +22,8 @@ import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -103,7 +103,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -139,11 +138,13 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.PlayerView
 import com.example.R
+import com.example.ui.theme.AnimePlayRoleShapes
 import com.example.ui.theme.ObsidianBackground
 import com.example.ui.theme.ObsidianBorder
 import com.example.ui.theme.ObsidianSurface
 import com.example.ui.theme.OnPrimaryBlack
 import com.example.ui.theme.SecondaryGray
+import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.VlcOrange
 import com.example.util.EqualizerPresets
 import com.example.util.TimeFormatters
@@ -953,9 +954,9 @@ fun PlayerScreen(
         contentAlignment = Alignment.Center
       ) {
         Surface(
-          color = ObsidianBackground.copy(alpha = 0.75f),
-          shape = RoundedCornerShape(50),
-          modifier = Modifier.border(1.dp, VlcOrange.copy(alpha = 0.6f), RoundedCornerShape(50))
+          color = ObsidianSurface.copy(alpha = 0.88f),
+          shape = AnimePlayRoleShapes.Chip,
+          border = BorderStroke(1.dp, ObsidianBorder)
         ) {
           Row(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
@@ -965,7 +966,7 @@ fun PlayerScreen(
             Icon(
               imageVector = if (isForward) Icons.Rounded.Forward10 else Icons.Rounded.Replay10,
               contentDescription = null,
-              tint = VlcOrange
+              tint = TextPrimary
             )
             Text(
               text = stringResource(
@@ -973,7 +974,7 @@ fun PlayerScreen(
                 state.seekJumpSeconds
               ),
               style = MaterialTheme.typography.titleSmall,
-              color = MaterialTheme.colorScheme.onBackground
+              color = TextPrimary
             )
           }
         }
@@ -982,12 +983,12 @@ fun PlayerScreen(
 
     gestureIndicator?.let { indicator ->
       Surface(
-        color = ObsidianBackground.copy(alpha = 0.85f),
-        shape = RoundedCornerShape(16.dp),
+        color = ObsidianSurface.copy(alpha = 0.9f),
+        shape = AnimePlayRoleShapes.Dialog,
+        border = BorderStroke(1.dp, ObsidianBorder),
         modifier = Modifier
           .align(Alignment.Center)
           .width(200.dp)
-          .border(1.dp, ObsidianBorder, RoundedCornerShape(16.dp))
           .testTag("gesture_indicator")
       ) {
         Column(
@@ -1012,7 +1013,7 @@ fun PlayerScreen(
                   R.string.cd_volume_icon
                 }
               ),
-              tint = VlcOrange
+              tint = TextPrimary
             )
             Text(
               text = stringResource(
@@ -1024,13 +1025,13 @@ fun PlayerScreen(
                 indicator.percent
               ),
               style = MaterialTheme.typography.labelLarge,
-              color = MaterialTheme.colorScheme.onBackground
+              color = TextPrimary
             )
           }
           LinearProgressIndicator(
             progress = { indicator.percent / 100f },
             color = VlcOrange,
-            trackColor = ObsidianSurface,
+            trackColor = ObsidianBackground,
             modifier = Modifier
               .fillMaxWidth()
               .height(6.dp)
@@ -1042,18 +1043,18 @@ fun PlayerScreen(
 
     feedbackToastText?.let { toastText ->
       Surface(
-        color = ObsidianBackground.copy(alpha = 0.88f),
-        shape = RoundedCornerShape(50),
+        color = ObsidianSurface.copy(alpha = 0.92f),
+        shape = AnimePlayRoleShapes.Chip,
+        border = BorderStroke(1.dp, ObsidianBorder),
         modifier = Modifier
           .align(Alignment.TopCenter)
           .windowInsetsPadding(WindowInsets.safeDrawing)
           .padding(top = 64.dp)
-          .border(1.dp, VlcOrange.copy(alpha = 0.6f), RoundedCornerShape(50))
       ) {
         Text(
           text = toastText,
           style = MaterialTheme.typography.labelMedium,
-          color = VlcOrange,
+          color = TextPrimary,
           modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
       }
@@ -1102,9 +1103,9 @@ fun PlayerScreen(
           controlsVisible = true
           interactionNonce++
         },
-        color = ObsidianBackground.copy(alpha = 0.85f),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.border(1.dp, VlcOrange, RoundedCornerShape(16.dp))
+        color = ObsidianSurface.copy(alpha = 0.9f),
+        shape = AnimePlayRoleShapes.Button,
+        border = BorderStroke(1.dp, ObsidianBorder)
       ) {
         Row(
           modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -1114,12 +1115,12 @@ fun PlayerScreen(
           Icon(
             imageVector = Icons.Rounded.LockOpen,
             contentDescription = stringResource(R.string.player_unlock_screen),
-            tint = VlcOrange
+            tint = TextPrimary
           )
           Text(
             text = stringResource(R.string.player_screen_locked_hint),
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onBackground
+            color = TextPrimary
           )
         }
       }
@@ -1135,15 +1136,7 @@ fun PlayerScreen(
       Box(
         modifier = Modifier
           .fillMaxSize()
-          .background(
-            Brush.verticalGradient(
-              colors = listOf(
-                ObsidianBackground.copy(alpha = 0.78f),
-                Color.Black.copy(alpha = 0.25f),
-                ObsidianBackground.copy(alpha = 0.86f)
-              )
-            )
-          )
+          .background(Color.Black.copy(alpha = 0.48f))
           .windowInsetsPadding(WindowInsets.safeDrawing)
           .padding(horizontal = 16.dp, vertical = 10.dp)
       ) {
@@ -1195,7 +1188,7 @@ fun PlayerScreen(
                       state.subtitleDisplayName.orEmpty()
                     ),
                     style = MaterialTheme.typography.labelSmall,
-                    color = VlcOrange,
+                    color = SecondaryGray,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false)
@@ -1232,7 +1225,7 @@ fun PlayerScreen(
                     Icon(
                       imageVector = Icons.Rounded.Bedtime,
                       contentDescription = null,
-                      tint = VlcOrange,
+                      tint = TextPrimary,
                       modifier = Modifier.size(13.dp)
                     )
                     Text(
@@ -1241,7 +1234,7 @@ fun PlayerScreen(
                         TimeFormatters.formatDuration(remSec * 1000L)
                       ),
                       style = MaterialTheme.typography.labelSmall,
-                      color = VlcOrange
+                      color = TextPrimary
                     )
                   }
                 }
@@ -1313,6 +1306,7 @@ fun PlayerScreen(
                   showSpeedMenu = true
                   interactionNonce++
                 },
+                shape = AnimePlayRoleShapes.Button,
                 modifier = Modifier
                   .minimumInteractiveComponentSize()
                   .testTag("player_speed_button")
@@ -1320,14 +1314,14 @@ fun PlayerScreen(
                 Icon(
                   imageVector = Icons.Rounded.Speed,
                   contentDescription = stringResource(R.string.player_speed_label),
-                  tint = VlcOrange,
+                  tint = TextPrimary,
                   modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                   text = stringResource(R.string.player_speed_value, formatSpeed(state.playbackSpeed)),
                   style = MaterialTheme.typography.labelLarge,
-                  color = VlcOrange
+                  color = TextPrimary
                 )
               }
 
@@ -1341,7 +1335,7 @@ fun PlayerScreen(
                     text = {
                       Text(
                         text = stringResource(R.string.player_speed_value, formatSpeed(speed)),
-                        color = if (speed == state.playbackSpeed) VlcOrange else MaterialTheme.colorScheme.onSurface
+                        color = if (speed == state.playbackSpeed) VlcOrange else TextPrimary
                       )
                     },
                     onClick = {
@@ -1366,7 +1360,7 @@ fun PlayerScreen(
               Icon(
                 imageVector = Icons.Rounded.Tune,
                 contentDescription = stringResource(R.string.player_more_tools),
-                tint = VlcOrange
+                tint = TextPrimary
               )
             }
           }
@@ -1565,7 +1559,8 @@ fun PlayerScreen(
                   currentPositionMs = target
                   interactionNonce++
                 },
-                shape = RoundedCornerShape(10.dp),
+                shape = AnimePlayRoleShapes.Button,
+                border = BorderStroke(1.dp, ObsidianBorder),
                 modifier = Modifier
                   .height(38.dp)
                   .testTag("player_skip_op_button")
@@ -1573,14 +1568,14 @@ fun PlayerScreen(
                 Icon(
                   imageVector = Icons.Rounded.FastForward,
                   contentDescription = null,
-                  tint = VlcOrange,
+                  tint = TextPrimary,
                   modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                   text = stringResource(R.string.player_skip_op, state.skipIntroDurationSeconds),
                   style = MaterialTheme.typography.labelSmall,
-                  color = VlcOrange
+                  color = TextPrimary
                 )
               }
 
@@ -1589,7 +1584,8 @@ fun PlayerScreen(
                   showIntroOutroDialog = true
                   interactionNonce++
                 },
-                shape = RoundedCornerShape(10.dp),
+                shape = AnimePlayRoleShapes.Button,
+                border = BorderStroke(1.dp, ObsidianBorder),
                 modifier = Modifier
                   .height(38.dp)
                   .testTag("player_intro_outro_button")
@@ -1597,14 +1593,14 @@ fun PlayerScreen(
                 Icon(
                   imageVector = Icons.Rounded.AutoFixHigh,
                   contentDescription = null,
-                  tint = MaterialTheme.colorScheme.onBackground,
+                  tint = TextPrimary,
                   modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                   text = stringResource(R.string.player_intro_outro_button),
                   style = MaterialTheme.typography.labelSmall,
-                  color = MaterialTheme.colorScheme.onBackground
+                  color = TextPrimary
                 )
               }
             }
@@ -1627,13 +1623,13 @@ fun PlayerScreen(
                 interactionSource = nextInteraction,
                 colors = ButtonDefaults.buttonColors(
                   containerColor = ObsidianSurface.copy(alpha = 0.9f),
-                  contentColor = VlcOrange
+                  contentColor = TextPrimary
                 ),
-                shape = RoundedCornerShape(12.dp),
+                shape = AnimePlayRoleShapes.Button,
+                border = BorderStroke(1.dp, ObsidianBorder),
                 modifier = Modifier
                   .height(44.dp)
                   .scaleOnPress(nextInteraction)
-                  .border(1.dp, VlcOrange.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                   .testTag("player_next_episode_button")
               ) {
                 Icon(
@@ -1643,7 +1639,7 @@ fun PlayerScreen(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                  text = "${stringResource(R.string.player_next_episode)} (Ep ${nextEp.number})",
+                  text = "${stringResource(R.string.player_next_episode)} (${stringResource(R.string.detail_episode_label, nextEp.number)})",
                   style = MaterialTheme.typography.labelMedium
                 )
               }
@@ -1862,8 +1858,15 @@ private fun extractTracksOfType(tracks: Tracks, trackType: Int): List<PlayerTrac
     for (i in 0 until group.length) {
       if (!group.isTrackSupported(i)) continue
       val format = group.getTrackFormat(i)
-      val lang = format.language?.takeIf { it.isNotBlank() && it != "und" } ?: "Auto"
-      val label = listOfNotNull(format.label?.takeIf { it.isNotBlank() }, lang.uppercase())
+      val rawLang = format.language?.takeIf { it.isNotBlank() && it != "und" }
+      val langLabel = when (rawLang?.lowercase()) {
+        null -> "Otomatis"
+        "jpn", "ja" -> "Jepang"
+        "eng", "en" -> "Inggris"
+        "ind", "id" -> "Indonesia"
+        else -> rawLang.replaceFirstChar { it.titlecase() }
+      }
+      val label = listOfNotNull(format.label?.takeIf { it.isNotBlank() }, langLabel)
         .distinct()
         .joinToString(" • ")
         .ifBlank { "Track $counter" }
@@ -1907,7 +1910,7 @@ private fun PlayerErrorOverlay(
       Text(
         text = stringResource(R.string.player_error_title),
         style = MaterialTheme.typography.titleLarge,
-        color = MaterialTheme.colorScheme.onBackground,
+        color = TextPrimary,
         textAlign = TextAlign.Center
       )
       Text(
@@ -1921,17 +1924,20 @@ private fun PlayerErrorOverlay(
       ) {
         OutlinedButton(
           onClick = onBack,
+          shape = AnimePlayRoleShapes.Button,
+          border = BorderStroke(1.dp, ObsidianBorder),
           modifier = Modifier.height(48.dp)
         ) {
           Text(
             text = stringResource(R.string.player_back_to_detail),
-            color = SecondaryGray
+            color = TextPrimary
           )
         }
         Button(
           onClick = onRetry,
+          shape = AnimePlayRoleShapes.Button,
           colors = ButtonDefaults.buttonColors(
-            containerColor = VlcOrange,
+            containerColor = TextPrimary,
             contentColor = OnPrimaryBlack
           ),
           modifier = Modifier.height(48.dp)

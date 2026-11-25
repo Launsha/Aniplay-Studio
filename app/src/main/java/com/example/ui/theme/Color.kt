@@ -6,9 +6,11 @@ val ObsidianBackground = Color(0xFF0B0B0F)
 val ObsidianSurface = Color(0xFF16161C)
 val ObsidianSurfaceElevated = Color(0xFF202029)
 val ObsidianBorder = Color(0xFF2B2B36)
+val ObsidianDivider = Color(0xFF1E1E27)
 
+// Reserved strictly for play buttons, progress indicators, and active states
 val VlcOrange = Color(0xFFFF8800)
-val VlcOrangeSoft = Color(0x33FF8800)
+val VlcOrangeSoft = Color(0x29FF8800)
 val OnPrimaryBlack = Color(0xFF000000)
 
 val SecondaryGray = Color(0xFF9CA3AF)

@@ -1,6 +1,6 @@
 package com.example.ui.player
 
-import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -51,11 +51,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.data.local.entity.EpisodeEntity
+import com.example.ui.theme.AnimePlayRoleShapes
 import com.example.ui.theme.ObsidianBorder
+import com.example.ui.theme.ObsidianDivider
 import com.example.ui.theme.ObsidianSurface
 import com.example.ui.theme.ObsidianSurfaceElevated
 import com.example.ui.theme.OnPrimaryBlack
 import com.example.ui.theme.SecondaryGray
+import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.VlcOrange
 import com.example.util.TimeFormatters
 
@@ -100,6 +103,7 @@ fun IntroOutroScannerDialog(
 
   AlertDialog(
     onDismissRequest = onDismiss,
+    shape = AnimePlayRoleShapes.Dialog,
     containerColor = ObsidianSurface,
     title = {
       Text(
@@ -118,17 +122,17 @@ fun IntroOutroScannerDialog(
         Text(
           text = sourceLabel,
           style = MaterialTheme.typography.labelMedium,
-          color = VlcOrange
+          color = SecondaryGray
         )
 
         Button(
           onClick = onRunAutoScan,
           enabled = !isScanning,
           colors = ButtonDefaults.buttonColors(
-            containerColor = VlcOrange,
+            containerColor = TextPrimary,
             contentColor = OnPrimaryBlack
           ),
-          shape = RoundedCornerShape(12.dp),
+          shape = AnimePlayRoleShapes.Button,
           modifier = Modifier
             .fillMaxWidth()
             .testTag("dialog_run_intro_scan_button")
@@ -152,16 +156,16 @@ fun IntroOutroScannerDialog(
           Text(
             text = scanMessage,
             style = MaterialTheme.typography.bodySmall,
-            color = VlcOrange
+            color = TextPrimary
           )
         }
 
-        HorizontalDivider(color = ObsidianBorder)
+        HorizontalDivider(color = ObsidianDivider)
 
         Text(
           text = stringResource(R.string.intro_section_label),
           style = MaterialTheme.typography.titleSmall,
-          color = MaterialTheme.colorScheme.onSurface
+          color = TextPrimary
         )
         Text(
           text = if (introStart >= 0L && introEnd > introStart) {
@@ -185,27 +189,31 @@ fun IntroOutroScannerDialog(
               introStart = currentPositionMs
               if (introEnd <= introStart) introEnd = introStart + 85_000L
             },
+            shape = AnimePlayRoleShapes.Button,
+            border = BorderStroke(1.dp, ObsidianBorder),
             modifier = Modifier.weight(1f)
           ) {
-            Text(stringResource(R.string.intro_mark_start), style = MaterialTheme.typography.labelSmall, color = VlcOrange)
+            Text(stringResource(R.string.intro_mark_start), style = MaterialTheme.typography.labelSmall, color = TextPrimary)
           }
           OutlinedButton(
             onClick = {
               if (introStart < 0L) introStart = (currentPositionMs - 85_000L).coerceAtLeast(0L)
               introEnd = currentPositionMs.coerceAtLeast(introStart + 5_000L)
             },
+            shape = AnimePlayRoleShapes.Button,
+            border = BorderStroke(1.dp, ObsidianBorder),
             modifier = Modifier.weight(1f)
           ) {
-            Text(stringResource(R.string.intro_mark_end), style = MaterialTheme.typography.labelSmall, color = VlcOrange)
+            Text(stringResource(R.string.intro_mark_end), style = MaterialTheme.typography.labelSmall, color = TextPrimary)
           }
         }
 
-        HorizontalDivider(color = ObsidianBorder)
+        HorizontalDivider(color = ObsidianDivider)
 
         Text(
           text = stringResource(R.string.outro_section_label),
           style = MaterialTheme.typography.titleSmall,
-          color = MaterialTheme.colorScheme.onSurface
+          color = TextPrimary
         )
         Text(
           text = if (outroStart >= 0L && outroEnd > outroStart) {
@@ -230,18 +238,22 @@ fun IntroOutroScannerDialog(
               val maxDur = episode?.durationMs?.takeIf { it > currentPositionMs } ?: (currentPositionMs + 90_000L)
               if (outroEnd <= outroStart) outroEnd = maxDur
             },
+            shape = AnimePlayRoleShapes.Button,
+            border = BorderStroke(1.dp, ObsidianBorder),
             modifier = Modifier.weight(1f)
           ) {
-            Text(stringResource(R.string.outro_mark_start), style = MaterialTheme.typography.labelSmall, color = VlcOrange)
+            Text(stringResource(R.string.outro_mark_start), style = MaterialTheme.typography.labelSmall, color = TextPrimary)
           }
           OutlinedButton(
             onClick = {
               if (outroStart < 0L) outroStart = (currentPositionMs - 85_000L).coerceAtLeast(0L)
               outroEnd = currentPositionMs.coerceAtLeast(outroStart + 5_000L)
             },
+            shape = AnimePlayRoleShapes.Button,
+            border = BorderStroke(1.dp, ObsidianBorder),
             modifier = Modifier.weight(1f)
           ) {
-            Text(stringResource(R.string.outro_mark_end), style = MaterialTheme.typography.labelSmall, color = VlcOrange)
+            Text(stringResource(R.string.outro_mark_end), style = MaterialTheme.typography.labelSmall, color = TextPrimary)
           }
         }
 
@@ -259,7 +271,7 @@ fun IntroOutroScannerDialog(
           Text(
             text = stringResource(R.string.intro_outro_apply_all),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface
+            color = TextPrimary
           )
         }
 
@@ -270,7 +282,8 @@ fun IntroOutroScannerDialog(
             outroStart = -1L
             outroEnd = -1L
             onSaveSegments(-1L, -1L, -1L, -1L, "", applyToAll)
-          }
+          },
+          shape = AnimePlayRoleShapes.Button
         ) {
           Text(stringResource(R.string.intro_outro_reset), color = MaterialTheme.colorScheme.error)
         }
@@ -282,13 +295,17 @@ fun IntroOutroScannerDialog(
           onSaveSegments(introStart, introEnd, outroStart, outroEnd, "manual", applyToAll)
           onDismiss()
         },
-        colors = ButtonDefaults.buttonColors(containerColor = VlcOrange, contentColor = OnPrimaryBlack)
+        shape = AnimePlayRoleShapes.Button,
+        colors = ButtonDefaults.buttonColors(containerColor = TextPrimary, contentColor = OnPrimaryBlack)
       ) {
         Text(stringResource(R.string.action_save))
       }
     },
     dismissButton = {
-      TextButton(onClick = onDismiss) {
+      TextButton(
+        onClick = onDismiss,
+        shape = AnimePlayRoleShapes.Button
+      ) {
         Text(stringResource(R.string.action_close), color = SecondaryGray)
       }
     }
@@ -309,8 +326,9 @@ fun JumpToTimeDialog(
 
   AlertDialog(
     onDismissRequest = onDismiss,
+    shape = AnimePlayRoleShapes.Dialog,
     containerColor = ObsidianSurface,
-    icon = { Icon(Icons.Rounded.Schedule, contentDescription = null, tint = VlcOrange) },
+    icon = { Icon(Icons.Rounded.Schedule, contentDescription = null, tint = TextPrimary) },
     title = { Text(stringResource(R.string.player_jump_to_time), style = MaterialTheme.typography.titleLarge) },
     text = {
       Row(
@@ -323,6 +341,7 @@ fun JumpToTimeDialog(
           label = { Text(stringResource(R.string.player_jump_minutes)) },
           keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
           singleLine = true,
+          shape = AnimePlayRoleShapes.Input,
           modifier = Modifier.weight(1f)
         )
         OutlinedTextField(
@@ -331,6 +350,7 @@ fun JumpToTimeDialog(
           label = { Text(stringResource(R.string.player_jump_seconds)) },
           keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
           singleLine = true,
+          shape = AnimePlayRoleShapes.Input,
           modifier = Modifier.weight(1f)
         )
       }
@@ -345,13 +365,17 @@ fun JumpToTimeDialog(
           onJump(targetMs.coerceIn(0L, maxDur))
           onDismiss()
         },
-        colors = ButtonDefaults.buttonColors(containerColor = VlcOrange, contentColor = OnPrimaryBlack)
+        shape = AnimePlayRoleShapes.Button,
+        colors = ButtonDefaults.buttonColors(containerColor = TextPrimary, contentColor = OnPrimaryBlack)
       ) {
         Text(stringResource(R.string.player_jump_go))
       }
     },
     dismissButton = {
-      TextButton(onClick = onDismiss) {
+      TextButton(
+        onClick = onDismiss,
+        shape = AnimePlayRoleShapes.Button
+      ) {
         Text(stringResource(R.string.action_cancel), color = SecondaryGray)
       }
     }
@@ -369,8 +393,9 @@ fun MediaInfoDialog(
 ) {
   AlertDialog(
     onDismissRequest = onDismiss,
+    shape = AnimePlayRoleShapes.Dialog,
     containerColor = ObsidianSurface,
-    icon = { Icon(Icons.Rounded.Info, contentDescription = null, tint = VlcOrange) },
+    icon = { Icon(Icons.Rounded.Info, contentDescription = null, tint = TextPrimary) },
     title = { Text(stringResource(R.string.player_media_info), style = MaterialTheme.typography.titleLarge) },
     text = {
       Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -385,8 +410,11 @@ fun MediaInfoDialog(
       }
     },
     confirmButton = {
-      TextButton(onClick = onDismiss) {
-        Text(stringResource(R.string.action_close), color = VlcOrange)
+      TextButton(
+        onClick = onDismiss,
+        shape = AnimePlayRoleShapes.Button
+      ) {
+        Text(stringResource(R.string.action_close), color = TextPrimary)
       }
     }
   )
@@ -395,11 +423,11 @@ fun MediaInfoDialog(
 @Composable
 private fun MediaInfoRow(label: String, value: String) {
   Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-    Text(text = label, style = MaterialTheme.typography.labelSmall, color = VlcOrange)
+    Text(text = label, style = MaterialTheme.typography.labelSmall, color = SecondaryGray)
     Text(
       text = value,
       style = MaterialTheme.typography.bodySmall,
-      color = MaterialTheme.colorScheme.onSurface
+      color = TextPrimary
     )
   }
 }
@@ -413,6 +441,7 @@ fun PlayerEpisodeQueueDialog(
 ) {
   AlertDialog(
     onDismissRequest = onDismiss,
+    shape = AnimePlayRoleShapes.Dialog,
     containerColor = ObsidianSurface,
     title = { Text(stringResource(R.string.player_queue_title), style = MaterialTheme.typography.titleLarge) },
     text = {
@@ -426,16 +455,12 @@ fun PlayerEpisodeQueueDialog(
         episodes.forEach { ep ->
           val isCurrent = ep.id == currentEpisodeId
           Surface(
-            color = ObsidianSurfaceElevated,
-            shape = RoundedCornerShape(10.dp),
+            color = if (isCurrent) ObsidianSurfaceElevated else ObsidianSurface,
+            shape = RoundedCornerShape(12.dp),
+            border = if (isCurrent) BorderStroke(1.dp, ObsidianBorder) else null,
             modifier = Modifier
               .fillMaxWidth()
-              .border(
-                1.dp,
-                if (isCurrent) VlcOrange else ObsidianBorder,
-                RoundedCornerShape(10.dp)
-              )
-              .clip(RoundedCornerShape(10.dp))
+              .clip(RoundedCornerShape(12.dp))
               .clickable {
                 onSelectEpisode(ep)
                 onDismiss()
@@ -456,7 +481,7 @@ fun PlayerEpisodeQueueDialog(
                 Text(
                   text = stringResource(R.string.detail_episode_label, ep.number),
                   style = MaterialTheme.typography.labelLarge,
-                  color = if (isCurrent) VlcOrange else MaterialTheme.colorScheme.onSurface
+                  color = TextPrimary
                 )
                 Text(
                   text = ep.fileName,
@@ -479,7 +504,10 @@ fun PlayerEpisodeQueueDialog(
       }
     },
     confirmButton = {
-      TextButton(onClick = onDismiss) {
+      TextButton(
+        onClick = onDismiss,
+        shape = AnimePlayRoleShapes.Button
+      ) {
         Text(stringResource(R.string.action_close), color = SecondaryGray)
       }
     }

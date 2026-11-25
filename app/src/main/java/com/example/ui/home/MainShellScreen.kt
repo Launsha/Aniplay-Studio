@@ -1,14 +1,8 @@
 package com.example.ui.home
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -24,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.outlined.BarChart
@@ -51,7 +44,6 @@ import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -65,7 +57,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
@@ -78,13 +69,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.ui.guide.WelcomeOnboardingScreen
 import com.example.ui.settings.SettingsContent
+import com.example.ui.theme.AnimePlayRoleShapes
 import com.example.ui.theme.ObsidianBackground
-import com.example.ui.theme.ObsidianBorder
 import com.example.ui.theme.ObsidianSurface
 import com.example.ui.theme.OnPrimaryBlack
 import com.example.ui.theme.SecondaryGray
+import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.VlcOrange
-import com.example.ui.theme.VlcOrangeSoft
 
 enum class MainTab(
   val titleRes: Int,
@@ -132,17 +123,6 @@ fun MainShellScreen(
     currentTab = MainTab.BERANDA
   }
 
-  val infiniteTransition = rememberInfiniteTransition(label = "refresh_spin")
-  val spinAngle by infiniteTransition.animateFloat(
-    initialValue = 0f,
-    targetValue = 360f,
-    animationSpec = infiniteRepeatable(
-      animation = tween(durationMillis = 900, easing = LinearEasing),
-      repeatMode = RepeatMode.Restart
-    ),
-    label = "spin_angle"
-  )
-
   val pageTitle = when (currentTab) {
     MainTab.BERANDA -> stringResource(R.string.app_name)
     MainTab.PUSTAKA -> stringResource(R.string.library_page_title)
@@ -159,8 +139,8 @@ fun MainShellScreen(
       topBar = {
         TopAppBar(
           colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = ObsidianBackground.copy(alpha = 0.96f),
-            titleContentColor = MaterialTheme.colorScheme.onBackground
+            containerColor = ObsidianBackground,
+            titleContentColor = TextPrimary
           ),
           title = {
             Row(
@@ -172,13 +152,13 @@ fun MainShellScreen(
                 contentDescription = stringResource(R.string.cd_app_logo),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                  .size(34.dp)
-                  .clip(RoundedCornerShape(10.dp))
-                  .border(1.dp, ObsidianBorder, RoundedCornerShape(10.dp))
+                  .size(32.dp)
+                  .clip(AnimePlayRoleShapes.Poster)
               )
               Text(
                 text = pageTitle,
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleLarge,
+                color = TextPrimary
               )
             }
           },
@@ -192,7 +172,7 @@ fun MainShellScreen(
               Icon(
                 imageVector = Icons.AutoMirrored.Rounded.HelpOutline,
                 contentDescription = stringResource(R.string.action_open_guide),
-                tint = MaterialTheme.colorScheme.onBackground
+                tint = TextPrimary
               )
             }
             IconButton(
@@ -205,8 +185,7 @@ fun MainShellScreen(
               Icon(
                 imageVector = Icons.Rounded.Refresh,
                 contentDescription = stringResource(R.string.action_refresh),
-                tint = if (state.isScanning) VlcOrange else MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.rotate(if (state.isScanning) spinAngle else 0f)
+                tint = if (state.isScanning) SecondaryGray else TextPrimary
               )
             }
           }
@@ -216,7 +195,8 @@ fun MainShellScreen(
         if (!useNavigationRail) {
           NavigationBar(
             containerColor = ObsidianSurface,
-            contentColor = MaterialTheme.colorScheme.onSurface,
+            contentColor = TextPrimary,
+            tonalElevation = 0.dp,
             windowInsets = WindowInsets.navigationBars
           ) {
             MainTab.entries.forEach { tab ->
@@ -304,21 +284,15 @@ fun MainShellScreen(
           }
 
           if (state.scanError != null) {
-            Surface(
-              color = MaterialTheme.colorScheme.error.copy(alpha = 0.14f),
-              shape = RoundedCornerShape(12.dp),
+            Text(
+              text = stringResource(R.string.home_scan_error, state.scanError ?: ""),
+              style = MaterialTheme.typography.bodySmall,
+              color = MaterialTheme.colorScheme.error,
               modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .border(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-            ) {
-              Text(
-                text = stringResource(R.string.home_scan_error, state.scanError ?: ""),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(12.dp)
-              )
-            }
+                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.12f))
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+            )
           }
 
           when (currentTab) {
@@ -380,10 +354,11 @@ private fun MilestoneCelebrationDialog(
   AlertDialog(
     onDismissRequest = onDismiss,
     containerColor = ObsidianSurface,
+    shape = AnimePlayRoleShapes.Dialog,
     title = {
       Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxWidth()
       ) {
         Image(
@@ -393,13 +368,12 @@ private fun MilestoneCelebrationDialog(
           modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(4f / 3f)
-            .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, VlcOrange.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+            .clip(AnimePlayRoleShapes.Poster)
         )
         Text(
           text = stringResource(R.string.celebration_title),
           style = MaterialTheme.typography.titleLarge,
-          color = VlcOrange,
+          color = TextPrimary,
           textAlign = TextAlign.Center
         )
       }
@@ -413,7 +387,7 @@ private fun MilestoneCelebrationDialog(
         Text(
           text = stringResource(milestone.titleRes),
           style = MaterialTheme.typography.titleMedium,
-          color = MaterialTheme.colorScheme.onSurface,
+          color = TextPrimary,
           textAlign = TextAlign.Center
         )
         Text(
@@ -427,14 +401,18 @@ private fun MilestoneCelebrationDialog(
     confirmButton = {
       Button(
         onClick = onDismiss,
+        shape = AnimePlayRoleShapes.Button,
         colors = ButtonDefaults.buttonColors(
-          containerColor = VlcOrange,
+          containerColor = TextPrimary,
           contentColor = OnPrimaryBlack
         ),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(48.dp)
       ) {
         Text(stringResource(R.string.celebration_dismiss))
       }
     }
   )
 }
+
