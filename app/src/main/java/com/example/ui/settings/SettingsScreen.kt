@@ -1,5 +1,6 @@
 package com.example.ui.settings
 
+import android.app.Activity
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -8,6 +9,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,6 +36,7 @@ import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.SdCard
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -141,6 +145,7 @@ fun SettingsScreen(
   }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsContent(
   onOpenGuide: () -> Unit,
@@ -151,6 +156,10 @@ fun SettingsContent(
   val snackbarHostState = remember { SnackbarHostState() }
   var showResetConfirm by remember { mutableStateOf(false) }
   var selectedCategory by rememberSaveable { mutableStateOf(SettingsCategory.GENERAL) }
+
+  LaunchedEffect(Unit) {
+    viewModel.refreshStorageVolumes()
+  }
 
   LaunchedEffect(state.statusMessage) {
     state.statusMessage?.let { msg ->
@@ -170,6 +179,23 @@ fun SettingsContent(
         )
       }
       viewModel.addFolderFromTreeUri(uri.toString())
+    }
+  }
+
+  val volumeTreeIntentLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.StartActivityForResult()
+  ) { result ->
+    if (result.resultCode == Activity.RESULT_OK) {
+      val uri = result.data?.data
+      if (uri != null) {
+        runCatching {
+          context.contentResolver.takePersistableUriPermission(
+            uri,
+            Intent.FLAG_GRANT_READ_URI_PERMISSION
+          )
+        }
+        viewModel.addFolderFromTreeUri(uri.toString())
+      }
     }
   }
 
@@ -266,19 +292,27 @@ fun SettingsContent(
                           horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                           Icon(
-                            imageVector = Icons.Rounded.Folder,
+                            imageVector = if (folder.isSdCard) Icons.Rounded.SdCard else Icons.Rounded.Folder,
                             contentDescription = null,
                             tint = VlcOrange,
                             modifier = Modifier.size(20.dp)
                           )
-                          Text(
-                            text = folder.displayLabel,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                          )
+                          Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                              text = folder.displayLabel,
+                              style = MaterialTheme.typography.bodyMedium,
+                              color = MaterialTheme.colorScheme.onSurface,
+                              maxLines = 1,
+                              overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                              text = stringResource(
+                                if (folder.isSdCard) R.string.settings_sd_card_badge else R.string.settings_internal_badge
+                              ),
+                              style = MaterialTheme.typography.labelSmall,
+                              color = SecondaryGray
+                            )
+                          }
                           IconButton(
                             onClick = { viewModel.removeFolder(folder) },
                             modifier = Modifier.minimumInteractiveComponentSize()
@@ -352,6 +386,44 @@ fun SettingsContent(
                       maxLines = 1,
                       overflow = TextOverflow.Ellipsis
                     )
+                  }
+                }
+
+                val sdVolumes = state.availableVolumes.filter { !it.isPrimary || it.isRemovable }
+                if (sdVolumes.isNotEmpty()) {
+                  FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                  ) {
+                    sdVolumes.forEach { volume ->
+                      OutlinedButton(
+                        onClick = {
+                          val intent = volume.openDocumentTreeIntent
+                          if (intent != null) {
+                            volumeTreeIntentLauncher.launch(intent)
+                          } else {
+                            folderPickerLauncher.launch(null)
+                          }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.height(48.dp)
+                      ) {
+                        Icon(
+                          imageVector = Icons.Rounded.SdCard,
+                          contentDescription = null,
+                          tint = VlcOrange,
+                          modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                          text = stringResource(R.string.settings_pick_sd_card, volume.label),
+                          color = VlcOrange,
+                          style = MaterialTheme.typography.labelMedium,
+                          maxLines = 1,
+                          overflow = TextOverflow.Ellipsis
+                        )
+                      }
+                    }
                   }
                 }
               }

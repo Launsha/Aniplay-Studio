@@ -20,7 +20,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 
 data class AppSettings(
   // Folder & MAL
-  val scanFolders: Set<String> = setOf("Download"),
+  val scanFolders: Set<String> = emptySet(),
   val scanTreeUris: Set<String> = emptySet(),
   val autoEnrichMal: Boolean = true,
 
@@ -42,7 +42,7 @@ data class AppSettings(
   val keepScreenOn: Boolean = true,
 
   // VLC Audio & Equalizer
-  val audioEqualizerPreset: String = "normal", // normal, anime, bass, cinema, night
+  val audioEqualizerPreset: String = "normal", // normal, anime, action, slice_of_life, ost, horror_mystery, mecha_scifi, bass, cinema, night
   val audioBoostPercent: Int = 100, // 100..200
   val skipSilence: Boolean = false,
   val preferredAudioLanguage: String = "jpn", // auto, jpn, eng, ind
@@ -128,7 +128,7 @@ class AppSettingsDataStore @Inject constructor(
 
   val settingsFlow: Flow<AppSettings> = context.dataStore.data.map { prefs ->
     AppSettings(
-      scanFolders = prefs[Keys.SCAN_FOLDERS] ?: setOf("Download"),
+      scanFolders = prefs[Keys.SCAN_FOLDERS] ?: emptySet(),
       scanTreeUris = prefs[Keys.SCAN_TREE_URIS] ?: emptySet(),
       autoEnrichMal = prefs[Keys.AUTO_ENRICH_MAL] ?: true,
       hasCompletedOnboarding = prefs[Keys.HAS_COMPLETED_ONBOARDING] ?: false,
@@ -173,7 +173,7 @@ class AppSettingsDataStore @Inject constructor(
     val normalized = relativePath.trim().trim('/')
     context.dataStore.edit { prefs ->
       if (normalized.isNotBlank()) {
-        val current = prefs[Keys.SCAN_FOLDERS] ?: setOf("Download")
+        val current = prefs[Keys.SCAN_FOLDERS] ?: emptySet()
         prefs[Keys.SCAN_FOLDERS] = current + normalized
       }
       if (!treeUri.isNullOrBlank()) {
@@ -185,7 +185,7 @@ class AppSettingsDataStore @Inject constructor(
 
   suspend fun removeScanFolder(folderPath: String) {
     context.dataStore.edit { prefs ->
-      val current = prefs[Keys.SCAN_FOLDERS] ?: setOf("Download")
+      val current = prefs[Keys.SCAN_FOLDERS] ?: emptySet()
       prefs[Keys.SCAN_FOLDERS] = current - folderPath
     }
   }

@@ -36,7 +36,7 @@
     <string name="onboarding_page3_title">Kontrol Pemutar Ala VLC Mobile</string>
     <string name="onboarding_page3_body">Geser kiri untuk kecerahan, geser kanan untuk volume, ketuk dua kali untuk lompat cepat, atur Equalizer audio, pilih multi-track audio MKV, ganti rasio layar, hingga Skip OP +85 dtk!</string>
     <string name="onboarding_page4_title">Siap Memulai Petualangan?</string>
-    <string name="onboarding_page4_body">Pilih folder tempat kamu menyimpan file video anime (.mkv, .mp4, .avi, .webm), atau langsung jelajahi aplikasi dan atur kapan saja di menu Pengaturan.</string>
+    <string name="onboarding_page4_body">Pilih folder tempat kamu menyimpan file video anime (.mkv, .mp4, .avi, .webm) di Penyimpanan Internal maupun SD Card, atau langsung jelajahi aplikasi dan atur kapan saja di menu Pengaturan.</string>
     <string name="onboarding_pick_folder_cta">Pilih Folder Anime Sekarang</string>
 
     <string name="guide_screen_title">Panduan &amp; Tips AnimePlay</string>
@@ -84,10 +84,11 @@
     <string name="home_recent_title">Baru Ditambahkan &amp; Diputar</string>
     <string name="home_view_all_library">Lihat Semua di Pustaka</string>
     <string name="home_quick_guide_title">Mulai Cepat AnimePlay</string>
-    <string name="home_quick_guide_step1">1. Tambahkan folder berisi file anime di Pengaturan</string>
+    <string name="home_quick_guide_step1">1. Tambahkan folder anime dari Penyimpanan Internal atau SD Card di Pengaturan</string>
     <string name="home_quick_guide_step2">2. Ketuk Segarkan untuk memindai &amp; mengisi data otomatis</string>
     <string name="home_quick_guide_step3">3. Nikmati pemutar VLC lengkap dengan subtitle &amp; equalizer</string>
     <string name="home_configured_folders_chip">Folder aktif: %1$s</string>
+    <string name="home_no_folders_configured">Belum ada folder dipilih • Ketuk untuk tambah</string>
 
     <!-- Statistik Page -->
     <string name="stats_page_title">Statistik &amp; Pencapaian</string>
@@ -125,6 +126,8 @@
     <string name="home_watched_progress">%1$d/%2$d ditonton</string>
     <string name="home_empty_title">Folder pilihan kosong</string>
     <string name="home_empty_subtitle">Belum ada file video anime (.mp4, .mkv, .avi, .webm) di folder yang ditentukan (%1$s). Atur folder di Pengaturan atau pindai ulang.</string>
+    <string name="home_empty_title_no_folders">Belum ada folder dipilih</string>
+    <string name="home_empty_subtitle_no_folders">Folder pemindaian bawaan sengaja dibiarkan kosong. Pilih folder di Penyimpanan Internal atau SD Card melalui Pengaturan untuk mulai memindai.</string>
     <string name="home_search_empty_title">Anime tidak ditemukan</string>
     <string name="home_search_empty_subtitle">Coba ubah kata kunci pencarian atau filter genre dan tahunnya.</string>
     <string name="home_scan_error">Gagal memindai folder: %1$s</string>
@@ -189,10 +192,14 @@
     <string name="settings_tab_advanced">Lanjutan</string>
 
     <string name="settings_folders_section">Folder Pemindaian</string>
-    <string name="settings_folders_desc">Hanya folder yang terdaftar di bawah ini yang akan dipindai untuk mencari file video anime.</string>
+    <string name="settings_folders_desc">Hanya folder yang terdaftar di bawah ini (Penyimpanan Internal maupun SD Card) yang akan dipindai untuk mencari file video anime.</string>
     <string name="settings_add_folder">Tambah Folder</string>
+    <string name="settings_pick_sd_card">Pilih di SD Card (%1$s)</string>
+    <string name="settings_pick_internal">Pilih di Penyimpanan Internal</string>
+    <string name="settings_sd_card_badge">SD Card</string>
+    <string name="settings_internal_badge">Internal</string>
     <string name="settings_scan_now">Pindai Sekarang</string>
-    <string name="settings_folder_empty">Belum ada folder dipilih. Tambahkan minimal satu folder.</string>
+    <string name="settings_folder_empty">Belum ada folder dipilih. Tambahkan folder dari Penyimpanan Internal atau SD Card untuk mulai memindai.</string>
 
     <string name="settings_video_vlc_section">Video &amp; Akselerasi (VLC)</string>
     <string name="settings_hw_accel">Akselerasi Perangkat Keras</string>
@@ -218,9 +225,25 @@
     <string name="settings_eq_preset">Preset Equalizer</string>
     <string name="settings_eq_normal">Normal</string>
     <string name="settings_eq_anime">Anime &amp; Vokal</string>
+    <string name="settings_eq_action">Action &amp; Pertarungan</string>
+    <string name="settings_eq_slice_of_life">Slice of Life &amp; Dialog</string>
+    <string name="settings_eq_ost">Musik &amp; OST</string>
+    <string name="settings_eq_horror">Horor &amp; Misteri</string>
+    <string name="settings_eq_mecha">Mecha &amp; Sci-Fi</string>
     <string name="settings_eq_bass">Ekstra Bass</string>
     <string name="settings_eq_cinema">Bioskop</string>
     <string name="settings_eq_night">Mode Malam</string>
+
+    <string name="settings_eq_desc_normal">Audio asli tanpa perubahan equalizer.</string>
+    <string name="settings_eq_desc_anime">Menonjolkan vokal karakter dan kejelasan suara umum anime.</string>
+    <string name="settings_eq_desc_action">Bass bertenaga untuk ledakan, benturan, dan efek aksi tajam.</string>
+    <string name="settings_eq_desc_slice_of_life">Dialog seiyuu hangat &amp; jernih dengan nada tinggi yang lembut.</string>
+    <string name="settings_eq_desc_ost">Menyeimbangkan instrumen orkestra, musik OP/ED, dan vokal.</string>
+    <string name="settings_eq_desc_horror">Low-end menegangkan dengan detail bisikan &amp; suasana sekitar.</string>
+    <string name="settings_eq_desc_mecha">Sub-bass padat dan kejernihan suara synth, laser, dan mekanis.</string>
+    <string name="settings_eq_desc_bass">Dorongan frekuensi rendah maksimal untuk efek suara dalam.</string>
+    <string name="settings_eq_desc_cinema">Rentang dinamis luas bergaya teater untuk pengalaman layar lebar.</string>
+    <string name="settings_eq_desc_night">Meredam dentuman bass berlebih agar nyaman ditonton malam hari.</string>
     <string name="settings_audio_boost">Penguat Volume (Audio Boost): %1$d%%</string>
     <string name="settings_skip_silence">Lewati Bagian Hening (Skip Silence)</string>
     <string name="settings_skip_silence_desc">Percepat otomatis bagian audio yang benar-benar senyap.</string>

@@ -71,7 +71,7 @@ data class HomeUiState(
   val malStatusBreakdown: Map<String, Int> = emptyMap(),
   val achievements: List<MilestoneInfo> = emptyList(),
   val pendingCelebration: MilestoneInfo? = null,
-  val configuredFoldersLabel: String = "Download",
+  val configuredFoldersLabel: String = "",
   val scanError: String? = null
 )
 
@@ -236,9 +236,17 @@ class HomeViewModel @Inject constructor(
 
     val malBreakdown = library.groupingBy { it.anime.malStatus }.eachCount()
 
-    val foldersSummary = (settings.scanFolders.toList() + settings.scanTreeUris.map {
-      MediaStoreScanner.extractDisplayFolderLabel(it)
-    }).distinct().joinToString(", ").ifBlank { "-" }
+    val foldersSummary = buildList {
+      settings.scanFolders.sorted().forEach { rel ->
+        add("Internal: $rel")
+      }
+      settings.scanTreeUris.sorted().forEach { uriStr ->
+        val rel = MediaStoreScanner.extractRelativePathFromTreeUri(uriStr)
+        if (rel == null || settings.scanFolders.none { it.equals(rel, ignoreCase = true) }) {
+          add(MediaStoreScanner.extractDisplayFolderLabel(uriStr))
+        }
+      }
+    }.distinct().joinToString(", ")
 
     val watchStreakDays = repository.computeWatchStreakDays(activityList)
 

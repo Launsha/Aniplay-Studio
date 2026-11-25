@@ -759,9 +759,11 @@ fun EmptyLibraryState(
       Spacer(modifier = Modifier.height(16.dp))
 
       Text(
-        text = stringResource(
-          if (isFiltered) R.string.home_search_empty_title else R.string.home_empty_title
-        ),
+        text = when {
+          isFiltered -> stringResource(R.string.home_search_empty_title)
+          foldersLabel.isBlank() -> stringResource(R.string.home_empty_title_no_folders)
+          else -> stringResource(R.string.home_empty_title)
+        },
         style = MaterialTheme.typography.titleLarge,
         color = MaterialTheme.colorScheme.onBackground,
         textAlign = TextAlign.Center
@@ -770,10 +772,10 @@ fun EmptyLibraryState(
       Spacer(modifier = Modifier.height(8.dp))
 
       Text(
-        text = if (isFiltered) {
-          stringResource(R.string.home_search_empty_subtitle)
-        } else {
-          stringResource(R.string.home_empty_subtitle, foldersLabel)
+        text = when {
+          isFiltered -> stringResource(R.string.home_search_empty_subtitle)
+          foldersLabel.isBlank() -> stringResource(R.string.home_empty_subtitle_no_folders)
+          else -> stringResource(R.string.home_empty_subtitle, foldersLabel)
         },
         style = MaterialTheme.typography.bodyMedium,
         color = SecondaryGray,

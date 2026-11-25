@@ -55,6 +55,7 @@ import com.example.ui.theme.ObsidianSurfaceElevated
 import com.example.ui.theme.OnPrimaryBlack
 import com.example.ui.theme.SecondaryGray
 import com.example.ui.theme.VlcOrange
+import com.example.util.EqualizerPresets
 import kotlin.math.roundToInt
 
 data class PlayerTrackOption(
@@ -386,22 +387,20 @@ fun VlcToolsDialog(
           )
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          val presets = listOf(
-            "normal" to R.string.settings_eq_normal,
-            "anime" to R.string.settings_eq_anime,
-            "bass" to R.string.settings_eq_bass,
-            "cinema" to R.string.settings_eq_cinema,
-            "night" to R.string.settings_eq_night
-          )
-          presets.forEach { (key, labelRes) ->
+          EqualizerPresets.presets.forEach { preset ->
             FilterChip(
-              selected = eqPreset == key,
-              onClick = { onSelectEqPreset(key) },
-              label = { Text(stringResource(labelRes), style = MaterialTheme.typography.labelSmall) },
+              selected = eqPreset == preset.key,
+              onClick = { onSelectEqPreset(preset.key) },
+              label = { Text(stringResource(preset.labelRes), style = MaterialTheme.typography.labelSmall) },
               colors = chipColors
             )
           }
         }
+        Text(
+          text = stringResource(EqualizerPresets.findByKey(eqPreset).descriptionRes),
+          style = MaterialTheme.typography.labelSmall,
+          color = VlcOrange
+        )
         Text(
           text = stringResource(R.string.settings_audio_boost, audioBoostPercent),
           style = MaterialTheme.typography.labelSmall,

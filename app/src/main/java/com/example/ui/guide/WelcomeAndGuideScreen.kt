@@ -1,5 +1,6 @@
 package com.example.ui.guide
 
+import android.app.Activity
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -40,6 +41,7 @@ import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Replay
+import androidx.compose.material.icons.rounded.SdCard
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Tune
@@ -74,8 +76,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
+import com.example.data.scanner.MediaStoreScanner
 import com.example.ui.theme.ObsidianBackground
 import com.example.ui.theme.ObsidianBorder
 import com.example.ui.theme.ObsidianSurface
@@ -129,6 +133,11 @@ fun WelcomeOnboardingScreen(
 
   val pagerState = rememberPagerState(pageCount = { pages.size })
 
+  val sdVolumes = remember {
+    MediaStoreScanner.detectAvailableStorageVolumes(context)
+      .filter { !it.isPrimary || it.isRemovable }
+  }
+
   val folderPickerLauncher = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.OpenDocumentTree()
   ) { uri ->
@@ -141,6 +150,24 @@ fun WelcomeOnboardingScreen(
       }
       onAddFolderUri(uri.toString())
       onComplete()
+    }
+  }
+
+  val volumeTreeIntentLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.StartActivityForResult()
+  ) { result ->
+    if (result.resultCode == Activity.RESULT_OK) {
+      val uri = result.data?.data
+      if (uri != null) {
+        runCatching {
+          context.contentResolver.takePersistableUriPermission(
+            uri,
+            Intent.FLAG_GRANT_READ_URI_PERMISSION
+          )
+        }
+        onAddFolderUri(uri.toString())
+        onComplete()
+      }
     }
   }
 
@@ -301,6 +328,45 @@ fun WelcomeOnboardingScreen(
                 color = VlcOrange,
                 style = MaterialTheme.typography.labelLarge
               )
+            }
+            if (sdVolumes.isNotEmpty()) {
+              Spacer(modifier = Modifier.height(10.dp))
+              sdVolumes.forEach { volume ->
+                val sdInteraction = remember(volume.id) { MutableInteractionSource() }
+                OutlinedButton(
+                  onClick = {
+                    val intent = volume.openDocumentTreeIntent
+                    if (intent != null) {
+                      volumeTreeIntentLauncher.launch(intent)
+                    } else {
+                      folderPickerLauncher.launch(null)
+                    }
+                  },
+                  interactionSource = sdInteraction,
+                  shape = RoundedCornerShape(14.dp),
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp)
+                    .height(48.dp)
+                    .scaleOnPress(sdInteraction)
+                    .testTag("onboarding_pick_sd_button_${volume.id}")
+                ) {
+                  Icon(
+                    imageVector = Icons.Rounded.SdCard,
+                    contentDescription = null,
+                    tint = VlcOrange,
+                    modifier = Modifier.size(18.dp)
+                  )
+                  Spacer(modifier = Modifier.width(8.dp))
+                  Text(
+                    text = stringResource(R.string.settings_pick_sd_card, volume.label),
+                    color = VlcOrange,
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                  )
+                }
+              }
             }
           }
         }

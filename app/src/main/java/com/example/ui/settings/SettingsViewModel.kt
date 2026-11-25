@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.preferences.AppSettings
 import com.example.data.preferences.AppSettingsDataStore
 import com.example.data.repository.AnimeRepository
+import com.example.data.scanner.DetectedStorageVolume
 import com.example.data.scanner.MediaStoreScanner
 import com.example.util.MalXmlExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,12 +25,14 @@ import javax.inject.Inject
 data class FolderEntryUi(
   val key: String,
   val displayLabel: String,
-  val isTreeUri: Boolean
+  val isTreeUri: Boolean,
+  val isSdCard: Boolean = false
 )
 
 data class SettingsUiState(
   val settings: AppSettings = AppSettings(),
   val folders: List<FolderEntryUi> = emptyList(),
+  val availableVolumes: List<DetectedStorageVolume> = emptyList(),
   val isScanning: Boolean = false,
   val statusMessage: String? = null
 )
@@ -43,15 +46,28 @@ class SettingsViewModel @Inject constructor(
 
   private val isScanning = MutableStateFlow(false)
   private val statusMessage = MutableStateFlow<String?>(null)
+  private val availableVolumes = MutableStateFlow(MediaStoreScanner.detectAvailableStorageVolumes(context))
+
+  fun refreshStorageVolumes() {
+    availableVolumes.value = MediaStoreScanner.detectAvailableStorageVolumes(context)
+  }
 
   val uiState: StateFlow<SettingsUiState> = combine(
     settingsDataStore.settingsFlow,
+    availableVolumes,
     isScanning,
     statusMessage
-  ) { settings, scanning, message ->
+  ) { settings, volumes, scanning, message ->
     val folderItems = buildList {
       settings.scanFolders.sorted().forEach { rel ->
-        add(FolderEntryUi(key = rel, displayLabel = rel, isTreeUri = false))
+        add(
+          FolderEntryUi(
+            key = rel,
+            displayLabel = "Internal: $rel",
+            isTreeUri = false,
+            isSdCard = false
+          )
+        )
       }
       settings.scanTreeUris.sorted().forEach { uriStr ->
         val rel = MediaStoreScanner.extractRelativePathFromTreeUri(uriStr)
@@ -60,7 +76,8 @@ class SettingsViewModel @Inject constructor(
             FolderEntryUi(
               key = uriStr,
               displayLabel = MediaStoreScanner.extractDisplayFolderLabel(uriStr),
-              isTreeUri = true
+              isTreeUri = true,
+              isSdCard = MediaStoreScanner.isSdCardTreeUri(uriStr)
             )
           )
         }
@@ -70,6 +87,7 @@ class SettingsViewModel @Inject constructor(
     SettingsUiState(
       settings = settings,
       folders = folderItems,
+      availableVolumes = volumes,
       isScanning = scanning,
       statusMessage = message
     )

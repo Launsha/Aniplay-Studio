@@ -145,6 +145,7 @@ import com.example.ui.theme.ObsidianSurface
 import com.example.ui.theme.OnPrimaryBlack
 import com.example.ui.theme.SecondaryGray
 import com.example.ui.theme.VlcOrange
+import com.example.util.EqualizerPresets
 import com.example.util.TimeFormatters
 import com.example.util.scaleOnPress
 import kotlinx.coroutines.delay
@@ -295,18 +296,13 @@ fun PlayerScreen(
           val minLvl = bandLevelRange[0].toInt()
           val maxLvl = bandLevelRange[1].toInt()
           for (i in 0 until bands) {
-            val ratio = when (state.audioEqualizerPreset) {
-              "anime" -> when {
-                i == 0 -> 0.1f
-                i in 1..bands - 2 -> 0.55f
-                else -> 0.45f
-              }
-              "bass" -> if (i <= 1) 0.85f else 0.1f
-              "cinema" -> if (i == 0 || i == bands - 1) 0.65f else 0.3f
-              "night" -> if (i == 0) -0.3f else 0.35f
-              else -> 0f
-            }
-            val level = (ratio * (maxLvl - minLvl) * 0.45f).roundToInt().coerceIn(minLvl, maxLvl)
+            val level = EqualizerPresets.computeBandLevel(
+              presetKey = state.audioEqualizerPreset,
+              bandIndex = i,
+              bandCount = bands,
+              minLevel = minLvl,
+              maxLevel = maxLvl
+            )
             setBandLevel(i.toShort(), level.toShort())
           }
           enabled = state.audioEqualizerPreset != "normal"

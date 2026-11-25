@@ -2,9 +2,13 @@ package com.example.data.scanner
 
 import android.content.ContentResolver
 import android.content.ContentUris
+import android.content.Context
+import android.content.Intent
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
+import android.os.storage.StorageManager
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +25,14 @@ data class ScannedVideoFile(
   val durationMs: Long,
   val subtitleUri: String?,
   val parsedInfo: ParsedAnimeInfo
+)
+
+data class DetectedStorageVolume(
+  val id: String,
+  val label: String,
+  val isPrimary: Boolean,
+  val isRemovable: Boolean,
+  val openDocumentTreeIntent: Intent?
 )
 
 @Singleton
@@ -40,7 +52,7 @@ class MediaStoreScanner @Inject constructor(
       .filter { it.isNotBlank() }
       .toSet()
 
-    // Extract relative folders from any SAF tree URIs as well
+    // Extract relative folders from primary internal SAF tree URIs as well
     val treeRelativePaths = treeUris.mapNotNull { extractRelativePathFromTreeUri(it) }
     val allAllowedFolders = (normalizedAllowed + treeRelativePaths).toSet()
 
@@ -51,7 +63,7 @@ class MediaStoreScanner @Inject constructor(
     val results = mutableListOf<ScannedVideoFile>()
     val seenKeys = mutableSetOf<String>()
 
-    // 1. Scan MediaStore strictly filtered to configured folders
+    // 1. Scan MediaStore strictly filtered to configured primary-storage folders
     if (allAllowedFolders.isNotEmpty()) {
       val subtitleIndex = scanSubtitlesInFolders(allAllowedFolders)
       val projection = buildList {
@@ -60,6 +72,7 @@ class MediaStoreScanner @Inject constructor(
         add(MediaStore.Video.Media.DURATION)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
           add(MediaStore.Video.Media.RELATIVE_PATH)
+          add(MediaStore.MediaColumns.VOLUME_NAME)
         }
         @Suppress("DEPRECATION")
         add(MediaStore.Video.Media.DATA)
@@ -82,6 +95,11 @@ class MediaStoreScanner @Inject constructor(
         } else {
           -1
         }
+        val volCol = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+          cursor.getColumnIndex(MediaStore.MediaColumns.VOLUME_NAME)
+        } else {
+          -1
+        }
         @Suppress("DEPRECATION")
         val dataCol = cursor.getColumnIndex(MediaStore.Video.Media.DATA)
 
@@ -90,6 +108,13 @@ class MediaStoreScanner @Inject constructor(
           val displayName = cursor.getString(nameCol) ?: continue
           val extension = displayName.substringAfterLast('.', "").lowercase()
           if (extension !in supportedVideoExtensions) continue
+
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && volCol >= 0) {
+            val volName = cursor.getString(volCol)
+            if (!volName.isNullOrBlank() && !volName.equals(MediaStore.VOLUME_EXTERNAL_PRIMARY, ignoreCase = true)) {
+              continue
+            }
+          }
 
           val relativePath = if (relPathCol >= 0) cursor.getString(relPathCol) else null
           val rawDataPath = if (dataCol >= 0) cursor.getString(dataCol) else null
@@ -136,7 +161,7 @@ class MediaStoreScanner @Inject constructor(
       }
     }
 
-    // 2. Scan SAF document trees for non-primary volumes or folders not indexed by MediaStore
+    // 2. Scan SAF document trees for SD Cards, external drives, and primary subfolders
     for (treeUriString in treeUris) {
       runCatching {
         val treeUri = Uri.parse(treeUriString)
@@ -194,7 +219,7 @@ class MediaStoreScanner @Inject constructor(
       }
     }
 
-    val folderKey = parentDocId.substringAfter(':').trim('/').lowercase()
+    val folderKey = buildVolumeAwareFolderKey(parentDocId)
     for ((name, docUri) in videoEntries) {
       val dedupKey = "$folderKey/${name.lowercase()}"
       if (dedupKey in seenKeys) continue
@@ -240,6 +265,7 @@ class MediaStoreScanner @Inject constructor(
       add(MediaStore.Files.FileColumns.DISPLAY_NAME)
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         add(MediaStore.MediaColumns.RELATIVE_PATH)
+        add(MediaStore.MediaColumns.VOLUME_NAME)
       }
       @Suppress("DEPRECATION")
       add(MediaStore.MediaColumns.DATA)
@@ -254,6 +280,11 @@ class MediaStoreScanner @Inject constructor(
         } else {
           -1
         }
+        val volCol = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+          cursor.getColumnIndex(MediaStore.MediaColumns.VOLUME_NAME)
+        } else {
+          -1
+        }
         @Suppress("DEPRECATION")
         val dataCol = cursor.getColumnIndex(MediaStore.MediaColumns.DATA)
 
@@ -262,6 +293,13 @@ class MediaStoreScanner @Inject constructor(
           val displayName = cursor.getString(nameCol) ?: continue
           val ext = displayName.substringAfterLast('.', "").lowercase()
           if (ext !in supportedSubtitleExtensions) continue
+
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && volCol >= 0) {
+            val volName = cursor.getString(volCol)
+            if (!volName.isNullOrBlank() && !volName.equals(MediaStore.VOLUME_EXTERNAL_PRIMARY, ignoreCase = true)) {
+              continue
+            }
+          }
 
           val relPath = if (relPathCol >= 0) cursor.getString(relPathCol) else null
           val dataPath = if (dataCol >= 0) cursor.getString(dataCol) else null
@@ -339,7 +377,7 @@ class MediaStoreScanner @Inject constructor(
     if (!dataPath.isNullOrBlank()) {
       return (File(dataPath).parent ?: "").trim('/').lowercase()
     }
-    return "download"
+    return ""
   }
 
   private fun extractParentFolderName(relativePath: String?, dataPath: String?): String? {
@@ -368,6 +406,24 @@ class MediaStoreScanner @Inject constructor(
   }
 
   companion object {
+    fun buildVolumeAwareFolderKey(docId: String): String {
+      val volume = docId.substringBefore(':', "primary").trim().lowercase()
+      val relPart = docId.substringAfter(':', "").trim('/').lowercase()
+      return when {
+        volume == "primary" || volume.isBlank() -> relPart
+        relPart.isBlank() -> "sd_$volume"
+        else -> "sd_$volume/$relPart"
+      }
+    }
+
+    fun isSdCardTreeUri(treeUriString: String): Boolean {
+      return runCatching {
+        val docId = DocumentsContract.getTreeDocumentId(Uri.parse(treeUriString))
+        val volume = docId.substringBefore(':', "primary")
+        volume.isNotBlank() && !volume.equals("primary", ignoreCase = true)
+      }.getOrDefault(false)
+    }
+
     fun extractRelativePathFromTreeUri(treeUriString: String): String? {
       return runCatching {
         val docId = DocumentsContract.getTreeDocumentId(Uri.parse(treeUriString))
@@ -382,15 +438,51 @@ class MediaStoreScanner @Inject constructor(
     fun extractDisplayFolderLabel(treeUriString: String): String {
       return runCatching {
         val docId = DocumentsContract.getTreeDocumentId(Uri.parse(treeUriString))
-        docId.substringAfter(':').trim('/').ifBlank { docId }
+        val volume = docId.substringBefore(':', "")
+        val path = docId.substringAfter(':', "").trim('/')
+        when {
+          volume.equals("primary", ignoreCase = true) -> {
+            if (path.isBlank()) "Internal" else "Internal: $path"
+          }
+          volume.isNotBlank() -> {
+            if (path.isBlank()) "SD Card ($volume)" else "SD Card ($volume): $path"
+          }
+          else -> path.ifBlank { treeUriString }
+        }
       }.getOrElse { treeUriString }
     }
 
-    private fun extractTreeFolderName(treeUriString: String): String? {
+    fun extractTreeFolderName(treeUriString: String): String? {
       return runCatching {
         val docId = DocumentsContract.getTreeDocumentId(Uri.parse(treeUriString))
-        docId.substringAfter(':').trim('/').substringAfterLast('/').takeIf { it.isNotBlank() }
+        docId.substringAfter(':', "").trim('/').substringAfterLast('/').takeIf { it.isNotBlank() }
       }.getOrNull()
+    }
+
+    fun detectAvailableStorageVolumes(context: Context): List<DetectedStorageVolume> {
+      val sm = context.getSystemService(Context.STORAGE_SERVICE) as? StorageManager ?: return emptyList()
+      return runCatching {
+        sm.storageVolumes.mapNotNull { vol ->
+          if (vol.state != Environment.MEDIA_MOUNTED && vol.state != Environment.MEDIA_MOUNTED_READ_ONLY) {
+            return@mapNotNull null
+          }
+          val desc = runCatching { vol.getDescription(context) }.getOrNull().orEmpty()
+          val id = vol.uuid ?: if (vol.isPrimary) "primary" else desc
+          val label = desc.ifBlank { vol.uuid ?: if (vol.isPrimary) "Internal" else "SD Card" }
+          val treeIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            runCatching { vol.createOpenDocumentTreeIntent() }.getOrNull()
+          } else {
+            null
+          }
+          DetectedStorageVolume(
+            id = id,
+            label = label,
+            isPrimary = vol.isPrimary,
+            isRemovable = vol.isRemovable,
+            openDocumentTreeIntent = treeIntent
+          )
+        }
+      }.getOrDefault(emptyList())
     }
   }
 }

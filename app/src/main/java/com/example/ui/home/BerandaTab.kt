@@ -316,7 +316,11 @@ private fun WelcomeGreetingCard(
                 modifier = Modifier.size(15.dp)
               )
               Text(
-                text = stringResource(R.string.home_configured_folders_chip, configuredFoldersLabel),
+                text = if (configuredFoldersLabel.isBlank()) {
+                  stringResource(R.string.home_no_folders_configured)
+                } else {
+                  stringResource(R.string.home_configured_folders_chip, configuredFoldersLabel)
+                },
                 style = MaterialTheme.typography.labelSmall,
                 color = SecondaryGray,
                 maxLines = 1,

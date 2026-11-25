@@ -32,6 +32,7 @@ import com.example.ui.theme.ObsidianSurfaceElevated
 import com.example.ui.theme.OnPrimaryBlack
 import com.example.ui.theme.SecondaryGray
 import com.example.ui.theme.VlcOrange
+import com.example.util.EqualizerPresets
 import kotlin.math.roundToInt
 
 @Composable
@@ -235,15 +236,17 @@ fun VlcAudioSettingsSection(
   SettingsSectionCard(title = stringResource(R.string.settings_audio_vlc_section)) {
     SettingsChipGroup(
       title = stringResource(R.string.settings_eq_preset),
-      options = listOf(
-        "normal" to stringResource(R.string.settings_eq_normal),
-        "anime" to stringResource(R.string.settings_eq_anime),
-        "bass" to stringResource(R.string.settings_eq_bass),
-        "cinema" to stringResource(R.string.settings_eq_cinema),
-        "night" to stringResource(R.string.settings_eq_night)
-      ),
+      options = EqualizerPresets.presets.map { preset ->
+        preset.key to stringResource(preset.labelRes)
+      },
       selectedValue = settings.audioEqualizerPreset,
       onSelect = viewModel::setAudioEqualizerPreset
+    )
+
+    Text(
+      text = stringResource(EqualizerPresets.findByKey(settings.audioEqualizerPreset).descriptionRes),
+      style = MaterialTheme.typography.bodySmall,
+      color = VlcOrange
     )
 
     HorizontalDivider(color = ObsidianBorder)
