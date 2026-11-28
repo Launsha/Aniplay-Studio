@@ -22,6 +22,10 @@ android {
     versionName = "1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+    ndk {
+      abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+    }
   }
 
   // Do not remove or modify these signingConfigs. They are necessary for building, installing,
@@ -116,9 +120,7 @@ dependencies {
   implementation(libs.coil.video)
   implementation(libs.hilt.android)
   implementation(libs.androidx.hilt.navigation.compose)
-  implementation(libs.androidx.media3.exoplayer)
-  implementation(libs.androidx.media3.ui)
-  implementation(libs.androidx.media3.common)
+  implementation(libs.libvlc.all)
   implementation(libs.kotlinx.serialization.json)
   implementation(libs.vico.compose)
   implementation(libs.vico.compose.m3)

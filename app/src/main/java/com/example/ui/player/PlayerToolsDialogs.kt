@@ -47,7 +47,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.media3.common.TrackGroup
 import com.example.R
 import com.example.ui.theme.AnimePlayRoleShapes
 import com.example.ui.theme.ObsidianBorder
@@ -62,8 +61,7 @@ import com.example.util.EqualizerPresets
 import kotlin.math.roundToInt
 
 data class PlayerTrackOption(
-  val mediaTrackGroup: TrackGroup,
-  val trackIndex: Int,
+  val id: Int,
   val label: String,
   val isSelected: Boolean
 )

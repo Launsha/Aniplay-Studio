@@ -13,14 +13,13 @@ import android.provider.OpenableColumns
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.media3.common.MimeTypes
 import androidx.navigation.toRoute
 import com.example.data.local.entity.EpisodeBookmarkEntity
 import com.example.data.local.entity.EpisodeEntity
 import com.example.data.preferences.AppSettingsDataStore
 import com.example.data.repository.AnimeRepository
+import com.example.player.VlcPlayerController
 import com.example.ui.navigation.PlayerRoute
-import com.example.util.SubtitleSyncHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +34,9 @@ import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
 
+private const val MIME_SUBRIP = "application/x-subrip"
+private const val MIME_ASS = "text/x-ssa"
+
 data class PlayerUiState(
   val isLoadingEpisode: Boolean = true,
   val animeId: Long = 0L,
@@ -44,8 +46,7 @@ data class PlayerUiState(
   val allAnimeEpisodes: List<EpisodeEntity> = emptyList(),
   val requestedStartPositionMs: Long = -1L,
   val subtitleUri: String? = null,
-  val effectiveSubtitleUri: String? = null,
-  val subtitleMimeType: String = MimeTypes.APPLICATION_SUBRIP,
+  val subtitleMimeType: String = MIME_SUBRIP,
   val subtitleDisplayName: String? = null,
   val subtitlesEnabled: Boolean = true,
   val subtitleDelayMs: Int = 0,
@@ -96,6 +97,8 @@ class PlayerViewModel @Inject constructor(
 
   private val initialRoute: PlayerRoute = savedStateHandle.toRoute()
 
+  val controller = VlcPlayerController(context, contentResolver)
+
   private val _uiState = MutableStateFlow(
     PlayerUiState(requestedStartPositionMs = initialRoute.startPositionMs)
   )
@@ -103,6 +106,11 @@ class PlayerViewModel @Inject constructor(
 
   init {
     loadEpisode(initialRoute.episodeId, initialRoute.startPositionMs)
+  }
+
+  override fun onCleared() {
+    controller.release()
+    super.onCleared()
   }
 
   fun loadEpisode(episodeId: Long, explicitStartPosMs: Long = -1L) {
@@ -132,15 +140,22 @@ class PlayerViewModel @Inject constructor(
       val next = repository.getNextEpisode(episode.animeId, episode.number)
       val resolvedSub = episode.subtitleUri
       val subName = resolvedSub?.let { resolveDisplayName(it) }
-      val subMime = resolvedSub?.let { resolveSubtitleMimeType(it, subName) }
-        ?: MimeTypes.APPLICATION_SUBRIP
-      val effectiveSub = resolveEffectiveSubtitleUri(
-        sourceUri = resolvedSub,
-        mimeType = subMime,
-        episodeId = episode.id,
-        delayMs = settings.subtitleDelayMs
-      )
+      val subMime = resolvedSub?.let { resolveSubtitleMimeType(it, subName) } ?: MIME_SUBRIP
       val bookmarks = repository.observeBookmarksForEpisode(episode.id).first()
+
+      val resumePosition = when {
+        explicitStartPosMs >= 0L -> explicitStartPosMs
+        else -> {
+          val saved = episode.lastPositionMs
+          val dur = episode.durationMs
+          val thresholdFraction = settings.watchedThresholdPercent / 100.0
+          if (saved > 0L && !episode.isWatched && (dur <= 0L || saved < (dur * thresholdFraction).toLong())) {
+            saved
+          } else {
+            0L
+          }
+        }
+      }
 
       _uiState.update {
         it.copy(
@@ -152,7 +167,6 @@ class PlayerViewModel @Inject constructor(
           allAnimeEpisodes = allEpisodes,
           requestedStartPositionMs = explicitStartPosMs,
           subtitleUri = resolvedSub,
-          effectiveSubtitleUri = effectiveSub,
           subtitleMimeType = subMime,
           subtitleDisplayName = subName,
           subtitlesEnabled = settings.autoEnableSubtitles,
@@ -190,26 +204,33 @@ class PlayerViewModel @Inject constructor(
           errorMessage = null
         )
       }
+
+      controller.configureSubtitleAppearance(
+        fontSizeSp = settings.subtitleFontSizeSp,
+        colorPreset = settings.subtitleColorPreset,
+        backgroundBox = settings.subtitleBackgroundBox
+      )
+      controller.openMedia(
+        fileUri = episode.fileUri,
+        startPositionMs = resumePosition,
+        playbackSpeed = settings.defaultPlaybackSpeed,
+        hardwareAccelerationMode = settings.hardwareAccelerationMode,
+        bufferProfile = settings.bufferProfile,
+        preferredAudioLanguage = settings.preferredAudioLanguage,
+        subtitlesEnabled = settings.autoEnableSubtitles,
+        externalSubtitleUri = resolvedSub,
+        subtitleDelayMs = settings.subtitleDelayMs,
+        equalizerPreset = settings.audioEqualizerPreset,
+        audioBoostPercent = settings.audioBoostPercent,
+        aspectRatioMode = settings.defaultAspectRatio
+      )
     }
   }
 
-  private suspend fun resolveEffectiveSubtitleUri(
-    sourceUri: String?,
-    mimeType: String,
-    episodeId: Long,
-    delayMs: Int
-  ): String? = withContext(Dispatchers.IO) {
-    if (sourceUri.isNullOrBlank()) return@withContext null
-    if (delayMs == 0) return@withContext sourceUri
-    val isAss = mimeType == MimeTypes.TEXT_SSA
-    SubtitleSyncHelper.createShiftedSubtitleUri(
-      context = context,
-      contentResolver = contentResolver,
-      sourceUri = sourceUri,
-      isAss = isAss,
-      episodeId = episodeId,
-      offsetMs = delayMs.toLong()
-    ) ?: sourceUri
+  fun retryPlayback() {
+    val ep = _uiState.value.currentEpisode ?: return
+    val pos = controller.positionMs.value.coerceAtLeast(0L)
+    loadEpisode(ep.id, explicitStartPosMs = pos)
   }
 
   fun saveProgress(positionMs: Long, durationMs: Long, watchedDeltaMs: Long = 0L) {
@@ -227,11 +248,22 @@ class PlayerViewModel @Inject constructor(
   fun toggleSubtitles(): Boolean {
     val nextEnabled = !_uiState.value.subtitlesEnabled
     _uiState.update { it.copy(subtitlesEnabled = nextEnabled) }
+    controller.setSubtitlesEnabled(nextEnabled)
     return nextEnabled
+  }
+
+  fun selectAudioTrack(trackId: Int) {
+    controller.selectAudioTrack(trackId)
+  }
+
+  fun selectSubtitleTrack(trackId: Int) {
+    controller.selectSubtitleTrack(trackId)
+    _uiState.update { it.copy(subtitlesEnabled = trackId != -1) }
   }
 
   fun setPlaybackSpeed(speed: Float) {
     _uiState.update { it.copy(playbackSpeed = speed) }
+    controller.setPlaybackSpeed(speed)
   }
 
   fun cycleAspectRatio(): String {
@@ -239,17 +271,20 @@ class PlayerViewModel @Inject constructor(
     val current = _uiState.value.aspectRatioMode
     val next = order[(order.indexOf(current) + 1) % order.size]
     _uiState.update { it.copy(aspectRatioMode = next) }
+    controller.setAspectRatioMode(next)
     return next
   }
 
   fun setEqualizerPreset(preset: String) {
     _uiState.update { it.copy(audioEqualizerPreset = preset) }
+    controller.setEqualizerAndBoost(preset, _uiState.value.audioBoostPercent)
     viewModelScope.launch { settingsDataStore.setAudioEqualizerPreset(preset) }
   }
 
   fun setAudioBoostPercent(percent: Int) {
     val clamped = percent.coerceIn(100, 200)
     _uiState.update { it.copy(audioBoostPercent = clamped) }
+    controller.setEqualizerAndBoost(_uiState.value.audioEqualizerPreset, clamped)
     viewModelScope.launch { settingsDataStore.setAudioBoostPercent(clamped) }
   }
 
@@ -281,22 +316,10 @@ class PlayerViewModel @Inject constructor(
 
   fun setSubtitleDelayMs(delayMs: Int) {
     val clamped = delayMs.coerceIn(-5000, 5000)
-    val ep = _uiState.value.currentEpisode
-    val srcSub = _uiState.value.subtitleUri
-    val mime = _uiState.value.subtitleMimeType
+    _uiState.update { it.copy(subtitleDelayMs = clamped) }
+    controller.setSubtitleDelayMs(clamped)
     viewModelScope.launch {
       settingsDataStore.setSubtitleDelayMs(clamped)
-      val shifted = if (ep != null) {
-        resolveEffectiveSubtitleUri(srcSub, mime, ep.id, clamped)
-      } else {
-        srcSub
-      }
-      _uiState.update {
-        it.copy(
-          subtitleDelayMs = clamped,
-          effectiveSubtitleUri = shifted
-        )
-      }
     }
   }
 
@@ -376,21 +399,15 @@ class PlayerViewModel @Inject constructor(
     val mime = resolveSubtitleMimeType(uriString, name)
     viewModelScope.launch {
       repository.updateSubtitleUri(episodeId, uriString)
-      val effective = resolveEffectiveSubtitleUri(
-        sourceUri = uriString,
-        mimeType = mime,
-        episodeId = episodeId,
-        delayMs = _uiState.value.subtitleDelayMs
-      )
       _uiState.update {
         it.copy(
           subtitleUri = uriString,
-          effectiveSubtitleUri = effective,
           subtitleDisplayName = name,
           subtitleMimeType = mime,
           subtitlesEnabled = true
         )
       }
+      controller.setExternalSubtitle(uriString, select = true)
     }
   }
 
@@ -456,9 +473,9 @@ class PlayerViewModel @Inject constructor(
   private fun resolveSubtitleMimeType(uriString: String, displayName: String?): String {
     val candidate = (displayName ?: uriString).lowercase()
     return if (candidate.endsWith(".ass") || candidate.endsWith(".ssa")) {
-      MimeTypes.TEXT_SSA
+      MIME_ASS
     } else {
-      MimeTypes.APPLICATION_SUBRIP
+      MIME_SUBRIP
     }
   }
 }

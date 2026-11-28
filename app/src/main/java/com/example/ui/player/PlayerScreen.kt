@@ -5,20 +5,14 @@ import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
-import android.graphics.Color as AndroidColor
 import android.media.AudioManager
-import android.media.audiofx.Equalizer
-import android.media.audiofx.LoudnessEnhancer
-import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
 import android.util.Rational
-import android.util.TypedValue
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -122,21 +116,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.media3.common.AudioAttributes
-import androidx.media3.common.C
-import androidx.media3.common.MediaItem
-import androidx.media3.common.PlaybackException
-import androidx.media3.common.PlaybackParameters
-import androidx.media3.common.Player
-import androidx.media3.common.TrackSelectionOverride
-import androidx.media3.common.Tracks
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.DefaultLoadControl
-import androidx.media3.exoplayer.DefaultRenderersFactory
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.CaptionStyleCompat
-import androidx.media3.ui.PlayerView
 import com.example.R
 import com.example.ui.theme.AnimePlayRoleShapes
 import com.example.ui.theme.ObsidianBackground
@@ -146,12 +125,12 @@ import com.example.ui.theme.OnPrimaryBlack
 import com.example.ui.theme.SecondaryGray
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.VlcOrange
-import com.example.util.EqualizerPresets
 import com.example.util.TimeFormatters
 import com.example.util.scaleOnPress
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.videolan.libvlc.util.VLCVideoLayout
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -169,7 +148,6 @@ private data class GestureIndicatorState(
 
 private val speedOptions = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
 
-@OptIn(UnstableApi::class)
 @Composable
 fun PlayerScreen(
   onBack: () -> Unit,
@@ -181,6 +159,20 @@ fun PlayerScreen(
   val activity = context as? Activity
   val state by viewModel.uiState.collectAsStateWithLifecycle()
   val latestState by rememberUpdatedState(state)
+  val controller = viewModel.controller
+
+  val isPlaying by controller.isPlaying.collectAsStateWithLifecycle()
+  val controllerPositionMs by controller.positionMs.collectAsStateWithLifecycle()
+  val controllerDurationMs by controller.durationMs.collectAsStateWithLifecycle()
+  val isBuffering by controller.isBuffering.collectAsStateWithLifecycle()
+  val vlcError by controller.error.collectAsStateWithLifecycle()
+  val audioTrackOptions by controller.audioTracks.collectAsStateWithLifecycle()
+  val subTrackOptions by controller.subtitleTracks.collectAsStateWithLifecycle()
+  val mediaInfo by controller.mediaInfo.collectAsStateWithLifecycle()
+  val endReachedCount by controller.endReachedCount.collectAsStateWithLifecycle()
+
+  val latestIsPlaying by rememberUpdatedState(isPlaying)
+  val latestPositionMs by rememberUpdatedState(controllerPositionMs)
 
   val audioManager = remember {
     context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -193,11 +185,7 @@ fun PlayerScreen(
   var controlsVisible by remember { mutableStateOf(true) }
   var isScreenLocked by remember { mutableStateOf(false) }
   var interactionNonce by remember { mutableIntStateOf(0) }
-  var isPlaying by remember { mutableStateOf(false) }
-  var isBuffering by remember { mutableStateOf(true) }
-  var playbackError by remember { mutableStateOf(false) }
-  var currentPositionMs by remember { mutableLongStateOf(0L) }
-  var totalDurationMs by remember { mutableLongStateOf(0L) }
+  var hasEnded by remember { mutableStateOf(false) }
   var isUserSeeking by remember { mutableStateOf(false) }
   var seekPreviewMs by remember { mutableLongStateOf(0L) }
   var showSpeedMenu by remember { mutableStateOf(false) }
@@ -212,7 +200,6 @@ fun PlayerScreen(
   var feedbackToastText by remember { mutableStateOf<String?>(null) }
   var accumulatedWatchMs by remember { mutableLongStateOf(0L) }
 
-  // VLC Extra features: Pinch zoom, Horizontal swipe seek, A-B Repeat, Auto-Skip OP/ED
   var pinchZoomScale by remember { mutableFloatStateOf(1f) }
   var horizontalSwipeDeltaMs by remember { mutableStateOf<Long?>(null) }
   var horizontalSwipeTargetMs by remember { mutableLongStateOf(0L) }
@@ -223,42 +210,17 @@ fun PlayerScreen(
 
   var currentClockText by remember { mutableStateOf("") }
   var batteryPercent by remember { mutableIntStateOf(100) }
-  var audioSessionId by remember { mutableIntStateOf(C.AUDIO_SESSION_ID_UNSET) }
-  var currentTracks by remember { mutableStateOf(Tracks.EMPTY) }
 
-  // Sleep Timer state
   var sleepSecondsLeft by remember { mutableStateOf<Int?>(null) }
   var sleepOnEpisodeEnd by remember { mutableStateOf(false) }
 
-  val exoPlayer = remember(context) {
-    val (minBuf, maxBuf, startBuf, rebuf) = when (latestState.bufferProfile) {
-      "low_ram" -> listOf(5_000, 15_000, 1_000, 2_000)
-      "high" -> listOf(15_000, 50_000, 2_500, 5_000)
-      else -> listOf(10_000, 30_000, 1_500, 3_000)
-    }
-    val loadControl = DefaultLoadControl.Builder()
-      .setBufferDurationsMs(minBuf, maxBuf, startBuf, rebuf)
-      .build()
-
-    val renderersFactory = DefaultRenderersFactory(context).apply {
-      setEnableDecoderFallback(true)
-      val extMode = when (latestState.hardwareAccelerationMode) {
-        "software" -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
-        else -> DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
-      }
-      setExtensionRendererMode(extMode)
-    }
-
-    val audioAttrs = AudioAttributes.Builder()
-      .setUsage(C.USAGE_MEDIA)
-      .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
-      .build()
-
-    ExoPlayer.Builder(context, renderersFactory)
-      .setLoadControl(loadControl)
-      .setAudioAttributes(audioAttrs, true)
-      .build()
+  val episode = state.currentEpisode
+  val totalDurationMs = if (controllerDurationMs > 0L) {
+    controllerDurationMs
+  } else {
+    episode?.durationMs?.coerceAtLeast(0L) ?: 0L
   }
+  val latestDurationMs by rememberUpdatedState(totalDurationMs)
 
   // Orientation & Keep Screen On
   DisposableEffect(activity, view, state.orientationMode, state.keepScreenOn) {
@@ -274,276 +236,142 @@ fun PlayerScreen(
       window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
-    val controller = window?.let { WindowCompat.getInsetsController(it, view) }
-    controller?.systemBarsBehavior =
+    val controllerInsets = window?.let { WindowCompat.getInsetsController(it, view) }
+    controllerInsets?.systemBarsBehavior =
       WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-    controller?.hide(WindowInsetsCompat.Type.systemBars())
+    controllerInsets?.hide(WindowInsetsCompat.Type.systemBars())
 
     onDispose {
       window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-      controller?.show(WindowInsetsCompat.Type.systemBars())
+      controllerInsets?.show(WindowInsetsCompat.Type.systemBars())
       activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     }
   }
 
-  // VLC Equalizer & LoudnessEnhancer tied to ExoPlayer audioSessionId
-  DisposableEffect(audioSessionId, state.audioEqualizerPreset, state.audioBoostPercent) {
-    var equalizer: Equalizer? = null
-    var enhancer: LoudnessEnhancer? = null
-    if (audioSessionId != C.AUDIO_SESSION_ID_UNSET && audioSessionId != 0) {
-      runCatching {
-        equalizer = Equalizer(0, audioSessionId).apply {
-          val bands = numberOfBands.toInt()
-          val minLvl = bandLevelRange[0].toInt()
-          val maxLvl = bandLevelRange[1].toInt()
-          for (i in 0 until bands) {
-            val level = EqualizerPresets.computeBandLevel(
-              presetKey = state.audioEqualizerPreset,
-              bandIndex = i,
-              bandCount = bands,
-              minLevel = minLvl,
-              maxLevel = maxLvl
-            )
-            setBandLevel(i.toShort(), level.toShort())
-          }
-          enabled = state.audioEqualizerPreset != "normal"
-        }
-      }
-      runCatching {
-        enhancer = LoudnessEnhancer(audioSessionId).apply {
-          val gainMb = ((state.audioBoostPercent - 100) * 15).coerceAtLeast(0)
-          setTargetGain(gainMb)
-          enabled = state.audioBoostPercent > 100
-        }
-      }
-    }
-    onDispose {
-      runCatching { equalizer?.release() }
-      runCatching { enhancer?.release() }
-    }
-  }
-
-  DisposableEffect(exoPlayer) {
-    val listener = object : Player.Listener {
-      override fun onAudioSessionIdChanged(id: Int) {
-        audioSessionId = id
-      }
-
-      override fun onTracksChanged(tracks: Tracks) {
-        currentTracks = tracks
-      }
-
-      override fun onIsPlayingChanged(playing: Boolean) {
-        isPlaying = playing
-        if (!playing) {
-          val delta = accumulatedWatchMs
-          accumulatedWatchMs = 0L
-          viewModel.saveProgress(
-            positionMs = exoPlayer.currentPosition,
-            durationMs = exoPlayer.duration.coerceAtLeast(0L),
-            watchedDeltaMs = delta
-          )
-        }
-      }
-
-      override fun onPlaybackStateChanged(playbackState: Int) {
-        isBuffering = playbackState == Player.STATE_BUFFERING
-        if (playbackState == Player.STATE_READY) {
-          playbackError = false
-          val dur = exoPlayer.duration.coerceAtLeast(0L)
-          if (dur > 0L) totalDurationMs = dur
-          audioSessionId = exoPlayer.audioSessionId
-        } else if (playbackState == Player.STATE_ENDED) {
-          val dur = exoPlayer.duration.coerceAtLeast(0L)
-          val delta = accumulatedWatchMs
-          accumulatedWatchMs = 0L
-          viewModel.saveProgress(dur, dur, watchedDeltaMs = delta)
-
-          if (sleepOnEpisodeEnd) {
-            sleepOnEpisodeEnd = false
-            controlsVisible = true
-            return
-          }
-
-          val next = latestState.nextEpisode
-          when (latestState.repeatMode) {
-            "one" -> {
-              exoPlayer.seekTo(0L)
-              exoPlayer.playWhenReady = true
-            }
-            "all" -> {
-              if (next != null) {
-                viewModel.loadEpisode(next.id)
-              } else {
-                val firstEp = latestState.allAnimeEpisodes.firstOrNull()
-                if (firstEp != null) {
-                  viewModel.loadEpisode(firstEp.id, explicitStartPosMs = 0L)
-                } else {
-                  controlsVisible = true
-                }
-              }
-            }
-            else -> {
-              if (latestState.autoPlayNextEpisode && next != null) {
-                viewModel.loadEpisode(next.id)
-              } else {
-                controlsVisible = true
-              }
-            }
-          }
-        }
-      }
-
-      override fun onPlayerError(error: PlaybackException) {
-        isBuffering = false
-        playbackError = true
-        controlsVisible = true
-      }
-    }
-    exoPlayer.addListener(listener)
-    onDispose {
+  // Save progress whenever playback pauses
+  var wasPlayingBefore by remember { mutableStateOf(false) }
+  LaunchedEffect(isPlaying) {
+    if (isPlaying) {
+      hasEnded = false
+    } else if (wasPlayingBefore) {
       val delta = accumulatedWatchMs
       accumulatedWatchMs = 0L
       viewModel.saveProgress(
-        positionMs = exoPlayer.currentPosition,
-        durationMs = exoPlayer.duration.coerceAtLeast(0L),
+        positionMs = latestPositionMs,
+        durationMs = latestDurationMs,
         watchedDeltaMs = delta
       )
-      exoPlayer.removeListener(listener)
-      exoPlayer.release()
     }
+    wasPlayingBefore = isPlaying
   }
 
-  DisposableEffect(lifecycleOwner, exoPlayer) {
+  // Save progress on lifecycle pause and dispose
+  DisposableEffect(lifecycleOwner, controller) {
     val observer = LifecycleEventObserver { _, event ->
       if (event == Lifecycle.Event.ON_PAUSE) {
-        val inPip = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && activity?.isInPictureInPictureMode == true
+        val inPip = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N &&
+          activity?.isInPictureInPictureMode == true
         if (!inPip && !latestState.backgroundAudioPlay) {
-          exoPlayer.pause()
+          controller.pause()
         }
         val delta = accumulatedWatchMs
         accumulatedWatchMs = 0L
         viewModel.saveProgress(
-          positionMs = exoPlayer.currentPosition,
-          durationMs = exoPlayer.duration.coerceAtLeast(0L),
+          positionMs = latestPositionMs,
+          durationMs = latestDurationMs,
           watchedDeltaMs = delta
         )
       }
     }
     lifecycleOwner.lifecycle.addObserver(observer)
     onDispose {
+      val delta = accumulatedWatchMs
+      accumulatedWatchMs = 0L
+      viewModel.saveProgress(
+        positionMs = latestPositionMs,
+        durationMs = latestDurationMs,
+        watchedDeltaMs = delta
+      )
       lifecycleOwner.lifecycle.removeObserver(observer)
     }
   }
 
-  val episode = state.currentEpisode
   LaunchedEffect(episode?.id) {
     abPointAMs = null
     abPointBMs = null
+    hasEnded = false
     autoSkippedIntroForEpId = -1L
     autoSkippedOutroForEpId = -1L
   }
 
-  LaunchedEffect(episode?.id, state.effectiveSubtitleUri, state.subtitleMimeType) {
-    if (episode != null) {
-      playbackError = false
-      isBuffering = true
+  // Handle EndReached events from VlcPlayerController
+  var handledEndCount by remember { mutableLongStateOf(0L) }
+  LaunchedEffect(endReachedCount) {
+    if (endReachedCount <= handledEndCount) return@LaunchedEffect
+    handledEndCount = endReachedCount
+    hasEnded = true
+    val dur = latestDurationMs
+    val delta = accumulatedWatchMs
+    accumulatedWatchMs = 0L
+    viewModel.saveProgress(dur, dur, watchedDeltaMs = delta)
 
-      val resumePosition = when {
-        exoPlayer.currentMediaItem?.mediaId == episode.id.toString() ->
-          exoPlayer.currentPosition.coerceAtLeast(0L)
-        state.requestedStartPositionMs >= 0L -> state.requestedStartPositionMs
-        else -> {
-          val saved = episode.lastPositionMs
-          val dur = episode.durationMs
-          val thresholdFraction = state.watchedThresholdPercent / 100.0
-          if (saved > 0L && !episode.isWatched && (dur <= 0L || saved < (dur * thresholdFraction).toLong())) {
-            saved
+    if (sleepOnEpisodeEnd) {
+      sleepOnEpisodeEnd = false
+      controlsVisible = true
+      return@LaunchedEffect
+    }
+
+    val next = latestState.nextEpisode
+    when (latestState.repeatMode) {
+      "one" -> {
+        hasEnded = false
+        controller.replayFromStart()
+      }
+      "all" -> {
+        if (next != null) {
+          viewModel.loadEpisode(next.id)
+        } else {
+          val firstEp = latestState.allAnimeEpisodes.firstOrNull()
+          if (firstEp != null) {
+            viewModel.loadEpisode(firstEp.id, explicitStartPosMs = 0L)
           } else {
-            0L
+            controlsVisible = true
           }
         }
       }
-
-      val mediaItemBuilder = MediaItem.Builder()
-        .setMediaId(episode.id.toString())
-        .setUri(Uri.parse(episode.fileUri))
-
-      val subUri = state.effectiveSubtitleUri
-      if (!subUri.isNullOrBlank()) {
-        val subConfig = MediaItem.SubtitleConfiguration.Builder(Uri.parse(subUri))
-          .setMimeType(state.subtitleMimeType)
-          .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
-          .build()
-        mediaItemBuilder.setSubtitleConfigurations(listOf(subConfig))
+      else -> {
+        if (latestState.autoPlayNextEpisode && next != null) {
+          viewModel.loadEpisode(next.id)
+        } else {
+          controlsVisible = true
+        }
       }
-
-      val paramBuilder = exoPlayer.trackSelectionParameters
-        .buildUpon()
-        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !state.subtitlesEnabled)
-      if (state.preferredAudioLanguage != "auto") {
-        paramBuilder.setPreferredAudioLanguage(state.preferredAudioLanguage)
-      }
-
-      exoPlayer.setMediaItem(mediaItemBuilder.build(), resumePosition)
-      exoPlayer.playbackParameters = PlaybackParameters(state.playbackSpeed)
-      exoPlayer.skipSilenceEnabled = state.skipSilence
-      exoPlayer.repeatMode = if (state.repeatMode == "one") Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
-      exoPlayer.trackSelectionParameters = paramBuilder.build()
-      exoPlayer.prepare()
-      exoPlayer.playWhenReady = true
-
-      totalDurationMs = episode.durationMs.coerceAtLeast(0L)
-      currentPositionMs = resumePosition
     }
-  }
-
-  LaunchedEffect(state.subtitlesEnabled) {
-    exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
-      .buildUpon()
-      .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !state.subtitlesEnabled)
-      .build()
-  }
-
-  LaunchedEffect(state.playbackSpeed) {
-    exoPlayer.playbackParameters = PlaybackParameters(state.playbackSpeed)
-  }
-
-  LaunchedEffect(state.skipSilence) {
-    exoPlayer.skipSilenceEnabled = state.skipSilence
-  }
-
-  LaunchedEffect(state.repeatMode) {
-    exoPlayer.repeatMode = if (state.repeatMode == "one") Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
   }
 
   val autoSkippedIntroMsg = stringResource(R.string.player_auto_skipped_intro)
   val autoSkippedOutroMsg = stringResource(R.string.player_auto_skipped_outro)
 
-  // Seekbar polling, A-B Repeat, Auto-Skip Intro/Outro, clock/battery, sleep timer countdown, and 5s progress save
-  LaunchedEffect(exoPlayer, episode?.id) {
+  // A-B Repeat, Auto-Skip Intro/Outro, clock/battery, sleep timer countdown, and 5s progress save
+  LaunchedEffect(controller, episode?.id) {
     var elapsedSaveMs = 0L
     var secondTickMs = 0L
     val clockFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     while (isActive) {
       delay(250L)
-      if (!isUserSeeking && exoPlayer.playbackState != Player.STATE_IDLE) {
-        val pos = exoPlayer.currentPosition.coerceAtLeast(0L)
-        val dur = exoPlayer.duration.coerceAtLeast(0L)
-        currentPositionMs = pos
-        if (dur > 0L) totalDurationMs = dur
+      val pos = controller.positionMs.value.coerceAtLeast(0L)
+      val dur = latestDurationMs
+      val playingNow = latestIsPlaying
 
-        // A-B Repeat check
+      if (!isUserSeeking && playingNow) {
         val pointA = abPointAMs
         val pointB = abPointBMs
-        if (pointA != null && pointB != null && pointB > pointA && pos >= pointB && exoPlayer.isPlaying) {
-          exoPlayer.seekTo(pointA)
-          currentPositionMs = pointA
+        if (pointA != null && pointB != null && pointB > pointA && pos >= pointB) {
+          controller.seekTo(pointA)
         }
 
-        // Auto-Skip Intro & Outro check
         val curEp = latestState.currentEpisode
-        if (curEp != null && exoPlayer.isPlaying) {
+        if (curEp != null) {
           if (latestState.autoSkipIntro &&
             autoSkippedIntroForEpId != curEp.id &&
             curEp.introStartMs >= 0L &&
@@ -551,8 +379,7 @@ fun PlayerScreen(
             pos in curEp.introStartMs until (curEp.introEndMs - 2_000L)
           ) {
             autoSkippedIntroForEpId = curEp.id
-            exoPlayer.seekTo(curEp.introEndMs)
-            currentPositionMs = curEp.introEndMs
+            controller.seekTo(curEp.introEndMs)
             feedbackToastText = autoSkippedIntroMsg
           } else if (latestState.autoSkipOutro &&
             autoSkippedOutroForEpId != curEp.id &&
@@ -565,14 +392,14 @@ fun PlayerScreen(
             if (nextEp != null && latestState.autoPlayNextEpisode) {
               viewModel.loadEpisode(nextEp.id)
             } else {
-              exoPlayer.seekTo(curEp.outroEndMs)
-              currentPositionMs = curEp.outroEndMs
+              controller.seekTo(curEp.outroEndMs)
             }
             feedbackToastText = autoSkippedOutroMsg
           }
         }
       }
-      if (exoPlayer.isPlaying) {
+
+      if (playingNow) {
         accumulatedWatchMs += 250L
         elapsedSaveMs += 250L
         if (elapsedSaveMs >= 5000L) {
@@ -580,12 +407,13 @@ fun PlayerScreen(
           val delta = accumulatedWatchMs
           accumulatedWatchMs = 0L
           viewModel.saveProgress(
-            positionMs = exoPlayer.currentPosition,
-            durationMs = exoPlayer.duration.coerceAtLeast(0L),
+            positionMs = pos,
+            durationMs = dur,
             watchedDeltaMs = delta
           )
         }
       }
+
       secondTickMs += 250L
       if (secondTickMs >= 1000L) {
         secondTickMs = 0L
@@ -597,7 +425,7 @@ fun PlayerScreen(
         sleepSecondsLeft?.let { rem ->
           if (rem <= 1) {
             sleepSecondsLeft = null
-            exoPlayer.pause()
+            controller.pause()
             controlsVisible = true
           } else {
             sleepSecondsLeft = rem - 1
@@ -607,9 +435,35 @@ fun PlayerScreen(
     }
   }
 
-  LaunchedEffect(controlsVisible, isPlaying, interactionNonce, showSpeedMenu, showTrackDialog, showToolsDialog, showIntroOutroDialog, showJumpToTimeDialog, showMediaInfoDialog, showQueueDialog, isScreenLocked) {
+  val hasPlaybackError = vlcError != null || state.errorMessage != null
+
+  LaunchedEffect(
+    controlsVisible,
+    isPlaying,
+    interactionNonce,
+    showSpeedMenu,
+    showTrackDialog,
+    showToolsDialog,
+    showIntroOutroDialog,
+    showJumpToTimeDialog,
+    showMediaInfoDialog,
+    showQueueDialog,
+    isScreenLocked,
+    hasPlaybackError
+  ) {
     val autoHideSec = state.controlsAutoHideSeconds
-    if (controlsVisible && isPlaying && !showSpeedMenu && !showTrackDialog && !showToolsDialog && !showIntroOutroDialog && !showJumpToTimeDialog && !showMediaInfoDialog && !showQueueDialog && !playbackError && autoHideSec > 0) {
+    if (controlsVisible &&
+      isPlaying &&
+      !showSpeedMenu &&
+      !showTrackDialog &&
+      !showToolsDialog &&
+      !showIntroOutroDialog &&
+      !showJumpToTimeDialog &&
+      !showMediaInfoDialog &&
+      !showQueueDialog &&
+      !hasPlaybackError &&
+      autoHideSec > 0
+    ) {
       delay(autoHideSec * 1000L)
       controlsVisible = false
     }
@@ -647,8 +501,8 @@ fun PlayerScreen(
     val delta = accumulatedWatchMs
     accumulatedWatchMs = 0L
     viewModel.saveProgress(
-      positionMs = exoPlayer.currentPosition,
-      durationMs = exoPlayer.duration.coerceAtLeast(0L),
+      positionMs = controller.positionMs.value,
+      durationMs = totalDurationMs,
       watchedDeltaMs = delta
     )
     onBack()
@@ -682,56 +536,18 @@ fun PlayerScreen(
 
     AndroidView(
       factory = { ctx ->
-        PlayerView(ctx).apply {
-          useController = false
-          keepScreenOn = true
-          player = exoPlayer
+        VLCVideoLayout(ctx).apply {
+          keepScreenOn = state.keepScreenOn
+          controller.attachView(this)
         }
       },
-      update = { playerView ->
-        if (playerView.player !== exoPlayer) {
-          playerView.player = exoPlayer
-        }
-        playerView.keepScreenOn = state.keepScreenOn
-
-        // Apply VLC Aspect Ratio / Resize Mode
-        playerView.resizeMode = when (state.aspectRatioMode) {
-          "fill" -> AspectRatioFrameLayout.RESIZE_MODE_FILL
-          "zoom" -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-          else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
-        }
-        val frameLayout = playerView.findViewById<AspectRatioFrameLayout>(androidx.media3.ui.R.id.exo_content_frame)
-        when (state.aspectRatioMode) {
-          "16_9" -> frameLayout?.setAspectRatio(16f / 9f)
-          "4_3" -> frameLayout?.setAspectRatio(4f / 3f)
-          else -> Unit
-        }
-
-        // Apply VLC Subtitle Styling
-        playerView.subtitleView?.let { subView ->
-          subView.setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, state.subtitleFontSizeSp.toFloat())
-          val fg = when (state.subtitleColorPreset) {
-            "yellow" -> AndroidColor.YELLOW
-            "orange" -> AndroidColor.parseColor("#FF8800")
-            "cyan" -> AndroidColor.CYAN
-            else -> AndroidColor.WHITE
-          }
-          val bg = if (state.subtitleBackgroundBox) {
-            AndroidColor.argb(145, 0, 0, 0)
-          } else {
-            AndroidColor.TRANSPARENT
-          }
-          subView.setStyle(
-            CaptionStyleCompat(
-              fg,
-              bg,
-              AndroidColor.TRANSPARENT,
-              CaptionStyleCompat.EDGE_TYPE_OUTLINE,
-              AndroidColor.BLACK,
-              null
-            )
-          )
-        }
+      update = { vlcLayout ->
+        vlcLayout.keepScreenOn = state.keepScreenOn
+        controller.attachView(vlcLayout)
+        controller.setAspectRatioMode(state.aspectRatioMode)
+      },
+      onRelease = { vlcLayout ->
+        controller.detachView(vlcLayout)
       },
       modifier = Modifier
         .fillMaxSize()
@@ -772,7 +588,7 @@ fun PlayerScreen(
             }
           }
         }
-        .pointerInput(exoPlayer, isScreenLocked, state.enableDoubleTapSeek, state.seekJumpSeconds) {
+        .pointerInput(controller, isScreenLocked, state.enableDoubleTapSeek, state.seekJumpSeconds) {
           detectTapGestures(
             onTap = {
               controlsVisible = !controlsVisible
@@ -783,10 +599,9 @@ fun PlayerScreen(
                 val isForward = offset.x >= containerWidthPx / 2f
                 val jumpMs = state.seekJumpSeconds * 1000L
                 val delta = if (isForward) jumpMs else -jumpMs
-                val maxDur = exoPlayer.duration.takeIf { it > 0L } ?: Long.MAX_VALUE
-                val target = (exoPlayer.currentPosition + delta).coerceIn(0L, maxDur)
-                exoPlayer.seekTo(target)
-                currentPositionMs = target
+                val maxDur = latestDurationMs.takeIf { it > 0L } ?: Long.MAX_VALUE
+                val target = (controller.positionMs.value + delta).coerceIn(0L, maxDur)
+                controller.seekTo(target)
                 doubleTapFeedback = isForward to ((doubleTapFeedback?.second ?: 0) + 1)
                 interactionNonce++
               }
@@ -855,19 +670,18 @@ fun PlayerScreen(
             }
           )
         }
-        .pointerInput(exoPlayer, isScreenLocked, state.enableHorizontalSwipeSeek) {
+        .pointerInput(controller, isScreenLocked, state.enableHorizontalSwipeSeek) {
           detectHorizontalDragGestures(
             onDragStart = {
               if (isScreenLocked || !state.enableHorizontalSwipeSeek) return@detectHorizontalDragGestures
-              horizontalStartPosMs = exoPlayer.currentPosition.coerceAtLeast(0L)
+              horizontalStartPosMs = controller.positionMs.value.coerceAtLeast(0L)
               horizontalAccumulatedPx = 0f
               horizontalSwipeDeltaMs = 0L
               horizontalSwipeTargetMs = horizontalStartPosMs
             },
             onDragEnd = {
               if (horizontalSwipeDeltaMs != null && !isScreenLocked && state.enableHorizontalSwipeSeek) {
-                exoPlayer.seekTo(horizontalSwipeTargetMs)
-                currentPositionMs = horizontalSwipeTargetMs
+                controller.seekTo(horizontalSwipeTargetMs)
                 interactionNonce++
               }
               horizontalSwipeDeltaMs = null
@@ -878,9 +692,8 @@ fun PlayerScreen(
             onHorizontalDrag = { _, dragAmount ->
               if (isScreenLocked || !state.enableHorizontalSwipeSeek) return@detectHorizontalDragGestures
               horizontalAccumulatedPx += dragAmount
-              // Full screen width horizontal drag = +/- 90 seconds
               val deltaMs = ((horizontalAccumulatedPx / containerWidthPx) * 90_000f).toLong()
-              val maxDur = exoPlayer.duration.takeIf { it > 0L } ?: Long.MAX_VALUE
+              val maxDur = latestDurationMs.takeIf { it > 0L } ?: Long.MAX_VALUE
               val target = (horizontalStartPosMs + deltaMs).coerceIn(0L, maxDur)
               horizontalSwipeTargetMs = target
               horizontalSwipeDeltaMs = target - horizontalStartPosMs
@@ -906,12 +719,12 @@ fun PlayerScreen(
     val inIntroWindow = episode != null &&
       episode.introStartMs >= 0L &&
       episode.introEndMs > episode.introStartMs + 5_000L &&
-      currentPositionMs in episode.introStartMs until (episode.introEndMs - 1_000L)
+      controllerPositionMs in episode.introStartMs until (episode.introEndMs - 1_000L)
 
     val inOutroWindow = episode != null &&
       episode.outroStartMs >= 0L &&
       episode.outroEndMs > episode.outroStartMs + 5_000L &&
-      currentPositionMs in episode.outroStartMs until (episode.outroEndMs - 1_000L)
+      controllerPositionMs in episode.outroStartMs until (episode.outroEndMs - 1_000L)
 
     FloatingSkipIntroOutroPills(
       inIntro = inIntroWindow,
@@ -921,8 +734,7 @@ fun PlayerScreen(
       isScreenLocked = isScreenLocked,
       onSkipIntro = {
         val target = episode?.introEndMs ?: return@FloatingSkipIntroOutroPills
-        exoPlayer.seekTo(target)
-        currentPositionMs = target
+        controller.seekTo(target)
         interactionNonce++
       },
       onSkipOutro = {
@@ -931,15 +743,14 @@ fun PlayerScreen(
           val delta = accumulatedWatchMs
           accumulatedWatchMs = 0L
           viewModel.saveProgress(
-            exoPlayer.currentPosition,
-            exoPlayer.duration.coerceAtLeast(0L),
+            controller.positionMs.value,
+            totalDurationMs,
             watchedDeltaMs = delta
           )
           viewModel.loadEpisode(nextEp.id)
         } else {
           val target = episode?.outroEndMs ?: return@FloatingSkipIntroOutroPills
-          exoPlayer.seekTo(target)
-          currentPositionMs = target
+          controller.seekTo(target)
         }
         interactionNonce++
       }
@@ -1060,7 +871,7 @@ fun PlayerScreen(
       }
     }
 
-    if ((isBuffering || state.isLoadingEpisode) && !playbackError && state.errorMessage == null) {
+    if ((isBuffering || state.isLoadingEpisode) && !hasPlaybackError) {
       Column(
         modifier = Modifier.align(Alignment.Center),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1070,18 +881,16 @@ fun PlayerScreen(
         Text(
           text = stringResource(R.string.player_loading),
           style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onBackground
+          color = TextPrimary
         )
       }
     }
 
-    if (playbackError || state.errorMessage != null) {
+    if (hasPlaybackError) {
       PlayerErrorOverlay(
         onRetry = {
-          playbackError = false
-          episode?.id?.let { viewModel.loadEpisode(it) }
-          exoPlayer.prepare()
-          exoPlayer.playWhenReady = true
+          controller.clearError()
+          viewModel.retryPlayback()
         },
         onBack = exitPlayer
       )
@@ -1089,7 +898,7 @@ fun PlayerScreen(
 
     // Screen Locked Overlay (only Unlock button)
     AnimatedVisibility(
-      visible = controlsVisible && isScreenLocked && !playbackError && state.errorMessage == null,
+      visible = controlsVisible && isScreenLocked && !hasPlaybackError,
       enter = fadeIn(),
       exit = fadeOut(),
       modifier = Modifier
@@ -1128,7 +937,7 @@ fun PlayerScreen(
 
     // Full VLC Controls Overlay
     AnimatedVisibility(
-      visible = controlsVisible && !isScreenLocked && !playbackError && state.errorMessage == null,
+      visible = controlsVisible && !isScreenLocked && !hasPlaybackError,
       enter = fadeIn(),
       exit = fadeOut(),
       modifier = Modifier.fillMaxSize()
@@ -1162,7 +971,7 @@ fun PlayerScreen(
               Icon(
                 imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                 contentDescription = stringResource(R.string.action_back),
-                tint = MaterialTheme.colorScheme.onBackground
+                tint = TextPrimary
               )
             }
             Column(modifier = Modifier.weight(1f)) {
@@ -1173,7 +982,7 @@ fun PlayerScreen(
                   state.animeTitle
                 },
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground,
+                color = TextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
               )
@@ -1280,7 +1089,7 @@ fun PlayerScreen(
               Icon(
                 imageVector = Icons.AutoMirrored.Rounded.PlaylistPlay,
                 contentDescription = stringResource(R.string.player_queue_title),
-                tint = MaterialTheme.colorScheme.onBackground
+                tint = TextPrimary
               )
             }
 
@@ -1296,7 +1105,7 @@ fun PlayerScreen(
               Icon(
                 imageVector = Icons.Rounded.Audiotrack,
                 contentDescription = stringResource(R.string.player_tracks_title),
-                tint = MaterialTheme.colorScheme.onBackground
+                tint = TextPrimary
               )
             }
 
@@ -1374,9 +1183,8 @@ fun PlayerScreen(
         ) {
           IconButton(
             onClick = {
-              val target = (exoPlayer.currentPosition - state.seekJumpSeconds * 1000L).coerceAtLeast(0L)
-              exoPlayer.seekTo(target)
-              currentPositionMs = target
+              val target = (controller.positionMs.value - state.seekJumpSeconds * 1000L).coerceAtLeast(0L)
+              controller.seekTo(target)
               interactionNonce++
             },
             modifier = Modifier
@@ -1388,7 +1196,7 @@ fun PlayerScreen(
             Icon(
               imageVector = Icons.Rounded.Replay10,
               contentDescription = stringResource(R.string.player_rewind_10, state.seekJumpSeconds),
-              tint = MaterialTheme.colorScheme.onBackground,
+              tint = TextPrimary,
               modifier = Modifier.size(30.dp)
             )
           }
@@ -1396,13 +1204,13 @@ fun PlayerScreen(
           val playInteraction = remember { MutableInteractionSource() }
           Surface(
             onClick = {
-              if (exoPlayer.isPlaying) {
-                exoPlayer.pause()
+              if (isPlaying) {
+                controller.pause()
+              } else if (hasEnded) {
+                hasEnded = false
+                controller.replayFromStart()
               } else {
-                if (exoPlayer.playbackState == Player.STATE_ENDED) {
-                  exoPlayer.seekTo(0L)
-                }
-                exoPlayer.play()
+                controller.play()
               }
               interactionNonce++
             },
@@ -1428,10 +1236,9 @@ fun PlayerScreen(
 
           IconButton(
             onClick = {
-              val maxDur = exoPlayer.duration.takeIf { it > 0L } ?: Long.MAX_VALUE
-              val target = (exoPlayer.currentPosition + state.seekJumpSeconds * 1000L).coerceIn(0L, maxDur)
-              exoPlayer.seekTo(target)
-              currentPositionMs = target
+              val maxDur = totalDurationMs.takeIf { it > 0L } ?: Long.MAX_VALUE
+              val target = (controller.positionMs.value + state.seekJumpSeconds * 1000L).coerceIn(0L, maxDur)
+              controller.seekTo(target)
               interactionNonce++
             },
             modifier = Modifier
@@ -1443,20 +1250,20 @@ fun PlayerScreen(
             Icon(
               imageVector = Icons.Rounded.Forward10,
               contentDescription = stringResource(R.string.player_forward_10, state.seekJumpSeconds),
-              tint = MaterialTheme.colorScheme.onBackground,
+              tint = TextPrimary,
               modifier = Modifier.size(30.dp)
             )
           }
         }
 
-        // Bottom Seekbar + VLC Action Strip (Lock, Aspect Ratio, Skip OP, Next Ep)
+        // Bottom Seekbar + VLC Action Strip
         Column(
           modifier = Modifier
             .fillMaxWidth()
             .align(Alignment.BottomCenter),
           verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-          val displayedPosition = if (isUserSeeking) seekPreviewMs else currentPositionMs
+          val displayedPosition = if (isUserSeeking) seekPreviewMs else controllerPositionMs
           val safeDuration = totalDurationMs.coerceAtLeast(1L)
 
           Row(
@@ -1467,7 +1274,7 @@ fun PlayerScreen(
             Text(
               text = TimeFormatters.formatDuration(displayedPosition),
               style = MaterialTheme.typography.labelMedium,
-              color = MaterialTheme.colorScheme.onBackground
+              color = TextPrimary
             )
 
             Slider(
@@ -1478,8 +1285,7 @@ fun PlayerScreen(
                 interactionNonce++
               },
               onValueChangeFinished = {
-                exoPlayer.seekTo(seekPreviewMs)
-                currentPositionMs = seekPreviewMs
+                controller.seekTo(seekPreviewMs)
                 isUserSeeking = false
                 viewModel.saveProgress(seekPreviewMs, totalDurationMs, watchedDeltaMs = 0L)
                 interactionNonce++
@@ -1523,7 +1329,7 @@ fun PlayerScreen(
                 Icon(
                   imageVector = Icons.Rounded.Lock,
                   contentDescription = stringResource(R.string.player_lock_screen),
-                  tint = MaterialTheme.colorScheme.onBackground
+                  tint = TextPrimary
                 )
               }
 
@@ -1539,24 +1345,23 @@ fun PlayerScreen(
                 Icon(
                   imageVector = Icons.Rounded.AspectRatio,
                   contentDescription = stringResource(R.string.player_aspect_ratio),
-                  tint = MaterialTheme.colorScheme.onBackground,
+                  tint = TextPrimary,
                   modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                   text = aspectLabel,
                   style = MaterialTheme.typography.labelSmall,
-                  color = MaterialTheme.colorScheme.onBackground
+                  color = TextPrimary
                 )
               }
 
               OutlinedButton(
                 onClick = {
-                  val maxDur = exoPlayer.duration.takeIf { it > 0L } ?: Long.MAX_VALUE
-                  val target = (exoPlayer.currentPosition + state.skipIntroDurationSeconds * 1000L)
+                  val maxDur = totalDurationMs.takeIf { it > 0L } ?: Long.MAX_VALUE
+                  val target = (controller.positionMs.value + state.skipIntroDurationSeconds * 1000L)
                     .coerceIn(0L, maxDur)
-                  exoPlayer.seekTo(target)
-                  currentPositionMs = target
+                  controller.seekTo(target)
                   interactionNonce++
                 },
                 shape = AnimePlayRoleShapes.Button,
@@ -1613,8 +1418,8 @@ fun PlayerScreen(
                   val delta = accumulatedWatchMs
                   accumulatedWatchMs = 0L
                   viewModel.saveProgress(
-                    exoPlayer.currentPosition,
-                    exoPlayer.duration.coerceAtLeast(0L),
+                    controller.positionMs.value,
+                    totalDurationMs,
                     watchedDeltaMs = delta
                   )
                   viewModel.loadEpisode(nextEp.id)
@@ -1651,30 +1456,14 @@ fun PlayerScreen(
   }
 
   if (showTrackDialog) {
-    val audioTrackOptions = remember(currentTracks) {
-      extractTracksOfType(currentTracks, C.TRACK_TYPE_AUDIO)
-    }
-    val subTrackOptions = remember(currentTracks) {
-      extractTracksOfType(currentTracks, C.TRACK_TYPE_TEXT)
-    }
     TrackSelectorDialog(
       audioTracks = audioTrackOptions,
       subtitleTracks = subTrackOptions,
       onSelectAudioTrack = { opt ->
-        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
-          .buildUpon()
-          .setOverrideForType(TrackSelectionOverride(opt.mediaTrackGroup, opt.trackIndex))
-          .build()
+        viewModel.selectAudioTrack(opt.id)
       },
       onSelectSubtitleTrack = { opt ->
-        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
-          .buildUpon()
-          .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-          .setOverrideForType(TrackSelectionOverride(opt.mediaTrackGroup, opt.trackIndex))
-          .build()
-        if (!state.subtitlesEnabled) {
-          viewModel.toggleSubtitles()
-        }
+        viewModel.selectSubtitleTrack(opt.id)
       },
       onPickExternalSubtitle = {
         subtitlePickerLauncher.launch(
@@ -1722,13 +1511,13 @@ fun PlayerScreen(
       },
       onSelectRepeatMode = viewModel::setRepeatMode,
       onSetAbPointA = {
-        val pos = exoPlayer.currentPosition.coerceAtLeast(0L)
+        val pos = controller.positionMs.value.coerceAtLeast(0L)
         abPointAMs = pos
         if (abPointBMs != null && abPointBMs!! <= pos) abPointBMs = null
         feedbackToastText = String.format(abPointAToastFmt, TimeFormatters.formatDuration(pos))
       },
       onSetAbPointB = {
-        val pos = exoPlayer.currentPosition.coerceAtLeast(0L)
+        val pos = controller.positionMs.value.coerceAtLeast(0L)
         val a = abPointAMs ?: (pos - 10_000L).coerceAtLeast(0L)
         abPointAMs = a
         abPointBMs = pos.coerceAtLeast(a + 2_000L)
@@ -1746,14 +1535,14 @@ fun PlayerScreen(
       onOpenJumpToTime = { showJumpToTimeDialog = true },
       onOpenMediaInfo = { showMediaInfoDialog = true },
       onCaptureScreenshot = {
-        val pos = exoPlayer.currentPosition.coerceAtLeast(0L)
+        val pos = controller.positionMs.value.coerceAtLeast(0L)
         coroutineScope.launch {
           val ok = viewModel.captureFrameToPictures(pos)
           feedbackToastText = if (ok) screenshotSavedMsg else screenshotFailedMsg
         }
       },
       onAddBookmark = {
-        val pos = exoPlayer.currentPosition.coerceAtLeast(0L)
+        val pos = controller.positionMs.value.coerceAtLeast(0L)
         val formatted = TimeFormatters.formatDuration(pos)
         viewModel.addBookmarkAt(pos, "${state.animeTitle} ($formatted)")
         feedbackToastText = String.format(bookmarkSavedFmt, formatted)
@@ -1779,7 +1568,7 @@ fun PlayerScreen(
     val savedMsg = stringResource(R.string.intro_outro_saved)
     IntroOutroScannerDialog(
       episode = episode,
-      currentPositionMs = currentPositionMs,
+      currentPositionMs = controllerPositionMs,
       isScanning = state.isScanningIntroOutro,
       scanMessage = state.introOutroScanMessage,
       onRunAutoScan = { viewModel.scanCurrentEpisodeIntroOutro(foundFmt, noneMsg) },
@@ -1793,11 +1582,10 @@ fun PlayerScreen(
 
   if (showJumpToTimeDialog) {
     JumpToTimeDialog(
-      currentPositionMs = currentPositionMs,
+      currentPositionMs = controllerPositionMs,
       totalDurationMs = totalDurationMs,
       onJump = { targetMs ->
-        exoPlayer.seekTo(targetMs)
-        currentPositionMs = targetMs
+        controller.seekTo(targetMs)
       },
       onDismiss = { showJumpToTimeDialog = false }
     )
@@ -1805,27 +1593,11 @@ fun PlayerScreen(
 
   if (showMediaInfoDialog) {
     val unknown = stringResource(R.string.player_media_unknown)
-    val videoFmt = currentTracks.groups
-      .firstOrNull { it.type == C.TRACK_TYPE_VIDEO && it.length > 0 }
-      ?.getTrackFormat(0)
-    val audioFmt = currentTracks.groups
-      .firstOrNull { it.type == C.TRACK_TYPE_AUDIO && it.isSelected && it.length > 0 }
-      ?.getTrackFormat(0)
-      ?: currentTracks.groups.firstOrNull { it.type == C.TRACK_TYPE_AUDIO && it.length > 0 }?.getTrackFormat(0)
-
     MediaInfoDialog(
       fileName = episode?.fileName ?: unknown,
-      resolution = if (videoFmt != null && videoFmt.width > 0 && videoFmt.height > 0) {
-        "${videoFmt.width} × ${videoFmt.height}"
-      } else {
-        unknown
-      },
-      videoCodec = videoFmt?.sampleMimeType ?: videoFmt?.codecs ?: unknown,
-      audioCodec = if (audioFmt != null) {
-        "${audioFmt.sampleMimeType ?: audioFmt.codecs ?: unknown} • ${audioFmt.channelCount}ch • ${audioFmt.sampleRate}Hz"
-      } else {
-        unknown
-      },
+      resolution = mediaInfo.resolution.ifBlank { unknown },
+      videoCodec = mediaInfo.videoCodec.ifBlank { unknown },
+      audioCodec = mediaInfo.audioCodec.ifBlank { unknown },
       durationMs = totalDurationMs,
       onDismiss = { showMediaInfoDialog = false }
     )
@@ -1839,8 +1611,8 @@ fun PlayerScreen(
         val delta = accumulatedWatchMs
         accumulatedWatchMs = 0L
         viewModel.saveProgress(
-          exoPlayer.currentPosition,
-          exoPlayer.duration.coerceAtLeast(0L),
+          controller.positionMs.value,
+          totalDurationMs,
           watchedDeltaMs = delta
         )
         viewModel.loadEpisode(chosen.id)
@@ -1848,40 +1620,6 @@ fun PlayerScreen(
       onDismiss = { showQueueDialog = false }
     )
   }
-}
-
-private fun extractTracksOfType(tracks: Tracks, trackType: Int): List<PlayerTrackOption> {
-  val list = mutableListOf<PlayerTrackOption>()
-  var counter = 1
-  for (group in tracks.groups) {
-    if (group.type != trackType) continue
-    for (i in 0 until group.length) {
-      if (!group.isTrackSupported(i)) continue
-      val format = group.getTrackFormat(i)
-      val rawLang = format.language?.takeIf { it.isNotBlank() && it != "und" }
-      val langLabel = when (rawLang?.lowercase()) {
-        null -> "Otomatis"
-        "jpn", "ja" -> "Jepang"
-        "eng", "en" -> "Inggris"
-        "ind", "id" -> "Indonesia"
-        else -> rawLang.replaceFirstChar { it.titlecase() }
-      }
-      val label = listOfNotNull(format.label?.takeIf { it.isNotBlank() }, langLabel)
-        .distinct()
-        .joinToString(" • ")
-        .ifBlank { "Track $counter" }
-      list.add(
-        PlayerTrackOption(
-          mediaTrackGroup = group.mediaTrackGroup,
-          trackIndex = i,
-          label = label,
-          isSelected = group.isTrackSelected(i)
-        )
-      )
-      counter++
-    }
-  }
-  return list
 }
 
 @Composable
